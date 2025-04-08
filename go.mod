@@ -1,4 +1,4 @@
-module github.com/binomena
+module github.com/igo-used/binomena
 
 go 1.22
 

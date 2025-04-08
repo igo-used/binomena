@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: binomena-node
+    env: docker
+    plan: standard
+    dockerfilePath: ./Dockerfile
+    dockerCommand: ./binomena --api-port $PORT --p2p-port 9000 --id "genesis-node"
+    envVars:
+      - key: PORT
+        value: 8080
+    autoDeploy: true
