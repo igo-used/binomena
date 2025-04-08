@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/binomena/core"
+	"github.com/igo-used/binomena/core"
 )
 
 // NodeSwift implements a custom Proof of Stake consensus mechanism

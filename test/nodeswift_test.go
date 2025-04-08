@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/binomena/consensus"
+	"github.com/igo-used/binomena/consensus"
 )
 
 func TestNodeSwift(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/binomena/core"
-	"github.com/binomena/wallet"
+	"github.com/igo-used/binomena/core"
+	"github.com/igo-used/binomena/wallet"
 )
 
 func TestTransactionCreation(t *testing.T) {

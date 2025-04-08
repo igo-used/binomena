@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/binomena/wallet"
+	"github.com/igo-used/binomena/wallet"
 )
 
 func TestWalletCreation(t *testing.T) {

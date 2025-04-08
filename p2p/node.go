@@ -7,7 +7,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/binomena/core"
+	"github.com/igo-used/binomena/core"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"

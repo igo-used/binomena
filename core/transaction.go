@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/binomena/wallet"
+	"github.com/igo-used/binomena/wallet"
 )
 
 // Transaction represents a transaction in the blockchain

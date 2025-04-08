@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/binomena/core"
+	"github.com/igo-used/binomena/core"
 )
 
 func TestBlockchain(t *testing.T) {

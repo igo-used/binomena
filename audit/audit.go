@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/binomena/core"
+	"github.com/igo-used/binomena/core"
 )
 
 // SecurityLevel represents the security level of an audit

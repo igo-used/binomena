@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/binomena/token"
+	"github.com/igo-used/binomena/token"
 )
 
 func TestBinomToken(t *testing.T) {

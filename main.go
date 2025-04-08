@@ -12,13 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/binomena/audit"
-	"github.com/binomena/consensus"
-	"github.com/binomena/core"
-	"github.com/binomena/p2p"
-	"github.com/binomena/token"
-	"github.com/binomena/wallet"
 	"github.com/gin-gonic/gin"
+	"github.com/igo-used/binomena/audit"
+	"github.com/igo-used/binomena/consensus"
+	"github.com/igo-used/binomena/core"
+	"github.com/igo-used/binomena/p2p"
+	"github.com/igo-used/binomena/token"
+	"github.com/igo-used/binomena/wallet"
 )
 
 func main() {
