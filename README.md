@@ -35,7 +35,7 @@ The Binomena blockchain consists of the following components:
 
 1. Clone the repository:
    \`\`\`
-   git clone https://github.com/yourusername/binomena.git
+   git clone [https://github.com/yourusername/binomena.git](https://github.com/igo-used/binomena)
    cd binomena
    \`\`\`
 
