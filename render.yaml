@@ -1,11 +1,14 @@
 services:
   - type: web
     name: binomena-node
-    env: docker
-    plan: standard
-    dockerfilePath: ./Dockerfile
-    dockerCommand: ./binomena --api-port $PORT --p2p-port 9000 --id "genesis-node"
+    env: go
+    buildCommand: go build -o binomena
+    startCommand: ./start.sh
     envVars:
       - key: PORT
         value: 8080
+    disk:
+      name: blockchain-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 10
     autoDeploy: true
