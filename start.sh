@@ -11,7 +11,7 @@ if [ -n "$DATA_DIR" ]; then
   echo "Setting up data directory: $DATA_DIR"
   mkdir -p $DATA_DIR
   
-  # Create a data subdirectory for blockchain data
+  # Create subdirectories for different types of data
   mkdir -p $DATA_DIR/blockchain
   mkdir -p $DATA_DIR/wallets
   
