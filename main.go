@@ -39,11 +39,61 @@ func main() {
 	// Initialize the blockchain
 	blockchain := core.NewBlockchain()
 
+	// Get data directory from environment variable
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		dataDir = "./data" // Fallback to local directory if env var not set
+	}
+
+	log.Printf("Using data directory: %s", dataDir)
+
+	// Load blockchain from disk if available
+	if err := blockchain.LoadChain(dataDir); err != nil {
+		log.Printf("Warning: Failed to load blockchain: %v", err)
+	} else {
+		log.Printf("Successfully loaded blockchain from disk")
+	}
+
+	// Set up periodic saving of blockchain
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if err := blockchain.SaveChain(dataDir); err != nil {
+				log.Printf("Warning: Failed to save blockchain: %v", err)
+			} else {
+				log.Printf("Blockchain saved successfully")
+			}
+		}
+	}()
+
 	// Initialize the NodeSwift consensus mechanism
 	nodeSwift := consensus.NewNodeSwift()
 
 	// Initialize the Binom token
 	binomToken := token.NewBinomToken()
+
+	// Load token balances from disk if available
+	if err := binomToken.LoadBalances(dataDir); err != nil {
+		log.Printf("Warning: Failed to load token balances: %v", err)
+	} else {
+		log.Printf("Successfully loaded token balances from disk")
+	}
+
+	// Set up periodic saving of token balances
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if err := binomToken.SaveBalances(dataDir); err != nil {
+				log.Printf("Warning: Failed to save token balances: %v", err)
+			} else {
+				log.Printf("Token balances saved successfully")
+			}
+		}
+	}()
 
 	// Initialize the smart contract system
 	contractStorage, err := smartcontract.NewContractStorage("./contracts")
@@ -259,6 +309,13 @@ func main() {
 			return
 		}
 
+		// Save token balances immediately after distribution
+		if err := binomToken.SaveBalances(dataDir); err != nil {
+			log.Printf("Warning: Failed to save token balances after distribution: %v", err)
+		} else {
+			log.Printf("Token balances saved successfully after distribution")
+		}
+
 		// Log the distribution
 		auditService.LogEvent(
 			audit.InfoLevel,
@@ -341,6 +398,11 @@ func main() {
 			return
 		}
 
+		// Save token balances immediately after faucet distribution
+		if err := binomToken.SaveBalances(dataDir); err != nil {
+			log.Printf("Warning: Failed to save token balances after faucet: %v", err)
+		}
+
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "success",
 			"message": fmt.Sprintf("Transferred %f BNM to %s", request.Amount, request.Address),
@@ -410,6 +472,15 @@ func main() {
 		// Broadcast transaction to the network
 		if err := p2pNode.BroadcastTransaction(*tx); err != nil {
 			log.Printf("Failed to broadcast transaction: %v", err)
+		}
+
+		// Save token balances and blockchain after transaction
+		if err := binomToken.SaveBalances(dataDir); err != nil {
+			log.Printf("Warning: Failed to save token balances after transaction: %v", err)
+		}
+
+		if err := blockchain.SaveChain(dataDir); err != nil {
+			log.Printf("Warning: Failed to save blockchain after transaction: %v", err)
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -567,6 +638,15 @@ func main() {
 			// Replace the blockchain safely
 			blockchain.ReplaceChain(newBlockchain.GetChain())
 
+			// Save the updated blockchain and token balances
+			if err := blockchain.SaveChain(dataDir); err != nil {
+				log.Printf("Warning: Failed to save blockchain after sync: %v", err)
+			}
+
+			if err := binomToken.SaveBalances(dataDir); err != nil {
+				log.Printf("Warning: Failed to save token balances after sync: %v", err)
+			}
+
 			c.JSON(http.StatusOK, gin.H{
 				"status":        "full chain replacement completed",
 				"blocksAdded":   peerBlockchain.Count - 1,
@@ -599,6 +679,15 @@ func main() {
 					// Burn fee
 					binomToken.Burn(fee)
 				}
+			}
+
+			// Save the updated blockchain and token balances
+			if err := blockchain.SaveChain(dataDir); err != nil {
+				log.Printf("Warning: Failed to save blockchain after sync: %v", err)
+			}
+
+			if err := binomToken.SaveBalances(dataDir); err != nil {
+				log.Printf("Warning: Failed to save token balances after sync: %v", err)
 			}
 
 			c.JSON(http.StatusOK, gin.H{
@@ -652,6 +741,21 @@ func main() {
 	<-quit
 
 	fmt.Println("Shutting down Binomena node...")
+
+	// Save token balances before shutdown
+	if err := binomToken.SaveBalances(dataDir); err != nil {
+		log.Printf("Warning: Failed to save token balances on shutdown: %v", err)
+	} else {
+		log.Printf("Token balances saved successfully on shutdown")
+	}
+
+	// Save blockchain before shutdown
+	if err := blockchain.SaveChain(dataDir); err != nil {
+		log.Printf("Warning: Failed to save blockchain on shutdown: %v", err)
+	} else {
+		log.Printf("Blockchain saved successfully on shutdown")
+	}
+
 	node.Stop()
 	p2pNode.Stop()
 	time.Sleep(time.Second)

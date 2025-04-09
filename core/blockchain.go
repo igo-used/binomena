@@ -3,7 +3,10 @@ package core
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -180,4 +183,86 @@ func CalculateHash(block Block) string {
 	h.Write([]byte(record))
 	hashed := h.Sum(nil)
 	return hex.EncodeToString(hashed)
+}
+
+// SaveChain saves the blockchain to disk
+func (bc *Blockchain) SaveChain(dataDir string) error {
+	bc.mu.RLock()
+	defer bc.mu.RUnlock()
+
+	// Create blockchain directory if it doesn't exist
+	blockchainDir := filepath.Join(dataDir, "blockchain")
+	if err := os.MkdirAll(blockchainDir, 0755); err != nil {
+		return fmt.Errorf("failed to create blockchain directory: %v", err)
+	}
+
+	// Marshal chain to JSON
+	data, err := json.MarshalIndent(bc.chain, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal blockchain: %v", err)
+	}
+
+	// Write to file
+	chainFile := filepath.Join(blockchainDir, "chain.json")
+	if err := os.WriteFile(chainFile, data, 0644); err != nil {
+		return fmt.Errorf("failed to write blockchain file: %v", err)
+	}
+
+	// Save pending transactions
+	txData, err := json.MarshalIndent(bc.transactions, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal transactions: %v", err)
+	}
+
+	txFile := filepath.Join(blockchainDir, "pending_tx.json")
+	if err := os.WriteFile(txFile, txData, 0644); err != nil {
+		return fmt.Errorf("failed to write transactions file: %v", err)
+	}
+
+	fmt.Printf("Saved blockchain with %d blocks\n", len(bc.chain))
+	return nil
+}
+
+// LoadChain loads the blockchain from disk
+func (bc *Blockchain) LoadChain(dataDir string) error {
+	blockchainDir := filepath.Join(dataDir, "blockchain")
+	chainFile := filepath.Join(blockchainDir, "chain.json")
+
+	// Check if file exists
+	if _, err := os.Stat(chainFile); os.IsNotExist(err) {
+		fmt.Printf("Blockchain file not found, using genesis block\n")
+		return nil
+	}
+
+	// Read chain file
+	data, err := os.ReadFile(chainFile)
+	if err != nil {
+		return fmt.Errorf("failed to read blockchain file: %v", err)
+	}
+
+	// Unmarshal JSON
+	bc.mu.Lock()
+	var chain []Block
+	if err := json.Unmarshal(data, &chain); err != nil {
+		bc.mu.Unlock()
+		return fmt.Errorf("failed to unmarshal blockchain: %v", err)
+	}
+
+	// Only replace chain if it's valid
+	if len(chain) > 0 {
+		bc.chain = chain
+	}
+
+	// Load pending transactions
+	txFile := filepath.Join(blockchainDir, "pending_tx.json")
+	if _, err := os.Stat(txFile); !os.IsNotExist(err) {
+		txData, err := os.ReadFile(txFile)
+		if err == nil {
+			json.Unmarshal(txData, &bc.transactions)
+		}
+	}
+
+	bc.mu.Unlock()
+	fmt.Printf("Loaded blockchain with %d blocks\n", len(bc.chain))
+	return nil
 }
