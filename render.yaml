@@ -14,5 +14,5 @@ services:
     disk:
       name: blockchain-data
       mountPath: /opt/render/project/src/data
-      sizeGB: 10
+      sizeGB: 1  
     autoDeploy: true

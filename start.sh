@@ -7,20 +7,15 @@ echo "NODE_ID: $NODE_ID"
 echo "DATA_DIR: $DATA_DIR"
 
 # Create data directory if it doesn't exist
-mkdir -p $DATA_DIR
-
-# Check if we need to create a data directory symlink
-# This helps the application find the data in its expected location
 if [ -n "$DATA_DIR" ]; then
   echo "Setting up data directory: $DATA_DIR"
+  mkdir -p $DATA_DIR
   
-  # Create symbolic links if needed
-  # This depends on how your application looks for data
-  # You might need to adjust these paths based on your application
-  ln -sf $DATA_DIR ./data 2>/dev/null || true
+  # Create a data subdirectory for blockchain data
+  mkdir -p $DATA_DIR/blockchain
+  mkdir -p $DATA_DIR/wallets
   
-  # Export environment variable for the application
-  export BINOMENA_DATA_DIR=$DATA_DIR
+  echo "Data directory created and ready"
 fi
 
 # Start the blockchain node with supported flags
