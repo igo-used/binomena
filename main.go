@@ -215,8 +215,13 @@ func main() {
 			return
 		}
 
-		// Verify admin key (use a strong, secret key)
-		if request.AdminKey != "binomena-founder-key-2025" {
+		// Verify admin key (use environment variable with fallback)
+		adminKey := os.Getenv("BINOMENA_ADMIN_KEY")
+		if adminKey == "" {
+			adminKey = "binomena-founder-key-2025" // Fallback key if env var is not set
+		}
+
+		if request.AdminKey != adminKey {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
@@ -308,8 +313,14 @@ func main() {
 			return
 		}
 
-		// IMPORTANT: Require admin key for ALL faucet requests
-		if request.AdminKey != "binomena-founder-key-2025" {
+		// Get admin key from environment variable with fallback
+		adminKey := os.Getenv("BINOMENA_ADMIN_KEY")
+		if adminKey == "" {
+			adminKey = "binomena-founder-key-2025" // Fallback key if env var is not set
+		}
+
+		// Check if admin key is valid
+		if request.AdminKey != adminKey {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"status":  "error",
 				"message": "Unauthorized. Tokens are not available for free distribution.",
