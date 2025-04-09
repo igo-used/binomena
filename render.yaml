@@ -7,10 +7,4 @@ services:
     envVars:
       - key: PORT
         value: 8080
-      - key: NODE_ID
-        value: genesis-node
-    disk:
-      name: blockchain-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 10
     autoDeploy: true
