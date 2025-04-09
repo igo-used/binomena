@@ -1,3 +1,6 @@
 {
-    "git.enabled": false
-}
+    "git.enabled": false,
+    "files.associations": {
+      "assembly/*.ts": "assemblyscript"
+    }
+  }
