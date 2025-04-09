@@ -294,7 +294,7 @@ func main() {
 		var request struct {
 			Address  string  `json:"address"`
 			Amount   float64 `json:"amount"`
-			AdminKey string  `json:"adminKey,omitempty"`
+			AdminKey string  `json:"adminKey"`
 		}
 
 		if err := c.ShouldBindJSON(&request); err != nil {
@@ -308,12 +308,18 @@ func main() {
 			return
 		}
 
-		// Check if this is an admin request
-		isAdmin := request.AdminKey == "binomena-founder-key-2025"
+		// IMPORTANT: Require admin key for ALL faucet requests
+		if request.AdminKey != "binomena-founder-key-2025" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status":  "error",
+				"message": "Unauthorized. Tokens are not available for free distribution.",
+			})
+			return
+		}
 
-		// Validate amount (skip limit for admin)
-		if !isAdmin && (request.Amount <= 0 || request.Amount > 10000) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Amount must be between 0 and 10000"})
+		// Validate amount
+		if request.Amount <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Amount must be greater than 0"})
 			return
 		}
 
