@@ -253,38 +253,7 @@ curl -X POST http://localhost:8080/peers -d '{"address":"/ip4/192.168.1.101/tcp/
 - `GET /audit/security`: Performs a security audit of the blockchain
 
 
-## Development
 
-### Project Structure
-
-```plaintext
-binomena/
-├── audit/
-│   └── audit.go
-├── consensus/
-│   └── nodeswift.go
-├── core/
-│   ├── blockchain.go
-│   ├── node.go
-│   └── transaction.go
-├── p2p/
-│   └── node.go
-├── test/
-│   ├── blockchain_test.go
-│   ├── binom_test.go
-│   ├── nodeswift_test.go
-│   ├── transaction_test.go
-│   └── wallet_test.go
-├── token/
-│   └── binom.go
-├── wallet/
-│   └── wallet.go
-├── main.go
-├── run_nodes.sh
-├── Dockerfile
-├── go.mod
-└── go.sum
-```
 
 ### Running Tests
 
