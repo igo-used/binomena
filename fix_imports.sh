@@ -1,3 +1,6 @@
 #!/bin/bash
-# For macOS
-find . -type f -name "*.go" -exec sed -i '' 's|github.com/binomena/|github.com/igo-used/binomena/|g' {} \;
+
+# Find all Go files and update import paths
+find . -name "*.go" -type f -exec sed -i '' 's|github.com/binomena/|github.com/igo-used/binomena/|g' {} \;
+
+echo "Import paths updated successfully!"

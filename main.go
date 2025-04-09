@@ -17,6 +17,7 @@ import (
 	"github.com/igo-used/binomena/consensus"
 	"github.com/igo-used/binomena/core"
 	"github.com/igo-used/binomena/p2p"
+	"github.com/igo-used/binomena/smartcontract"
 	"github.com/igo-used/binomena/token"
 	"github.com/igo-used/binomena/wallet"
 )
@@ -43,6 +44,37 @@ func main() {
 
 	// Initialize the Binom token
 	binomToken := token.NewBinomToken()
+
+	// Initialize the smart contract system
+	contractStorage, err := smartcontract.NewContractStorage("./contracts")
+	if err != nil {
+		log.Fatalf("Failed to initialize contract storage: %v", err)
+	}
+
+	contractState, err := smartcontract.NewContractState("./contracts")
+	if err != nil {
+		log.Fatalf("Failed to initialize contract state: %v", err)
+	}
+
+	wasmVM, err := smartcontract.NewWasmVM(binomToken, blockchain)
+	if err != nil {
+		log.Fatalf("Failed to initialize WASM VM: %v", err)
+	}
+
+	// Load existing contracts
+	contracts, err := contractStorage.LoadAllContracts()
+	if err != nil {
+		log.Printf("Warning: Failed to load contracts: %v", err)
+	} else {
+		for _, contract := range contracts {
+			// Add contract to VM
+			wasmVM.AddContract(contract)
+		}
+		log.Printf("Loaded %d contracts", len(contracts))
+	}
+
+	// Create contract API
+	contractAPI := smartcontract.NewContractAPI(wasmVM, contractStorage, contractState, binomToken)
 
 	// Initialize the audit service
 	auditService := audit.NewAuditService(blockchain)
@@ -468,6 +500,9 @@ func main() {
 			"events": criticalEvents,
 		})
 	})
+
+	// Register contract API routes
+	contractAPI.RegisterRoutes(router)
 
 	// Start the API server
 	apiAddress := fmt.Sprintf(":%d", *apiPort)
