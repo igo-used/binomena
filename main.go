@@ -180,11 +180,121 @@ func main() {
 		)
 	})
 
+	// NEW ENDPOINT: Get wallet balance
+	router.GET("/balance/:address", func(c *gin.Context) {
+		address := c.Param("address")
+
+		// Validate address format
+		if len(address) < 4 || address[:4] != "AdNe" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid address format"})
+			return
+		}
+
+		balance := binomToken.GetBalance(address)
+
+		c.JSON(http.StatusOK, gin.H{
+			"address": address,
+			"balance": balance,
+		})
+	})
+
+	// NEW ENDPOINT: Distribute initial tokens to three wallets
+	router.POST("/admin/distribute-initial-tokens", func(c *gin.Context) {
+		var request struct {
+			AdminKey         string  `json:"adminKey"`
+			FounderAddress   string  `json:"founderAddress"`
+			TreasuryAddress  string  `json:"treasuryAddress"`
+			CommunityAddress string  `json:"communityAddress"`
+			FounderPercent   float64 `json:"founderPercent"`
+			TreasuryPercent  float64 `json:"treasuryPercent"`
+			CommunityPercent float64 `json:"communityPercent"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Verify admin key (use a strong, secret key)
+		if request.AdminKey != "binomena-founder-key-2025" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		// Verify percentages add up to 100
+		totalPercent := request.FounderPercent + request.TreasuryPercent + request.CommunityPercent
+		if totalPercent != 100.0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Percentages must add up to 100"})
+			return
+		}
+
+		// Get total supply from treasury
+		totalSupply := binomToken.GetBalance("treasury")
+
+		// Calculate token amounts
+		founderAmount := totalSupply * (request.FounderPercent / 100.0)
+		treasuryAmount := totalSupply * (request.TreasuryPercent / 100.0)
+		communityAmount := totalSupply * (request.CommunityPercent / 100.0)
+
+		// Transfer tokens to founder
+		if err := binomToken.Transfer("treasury", request.FounderAddress, founderAmount); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to transfer to founder: %v", err)})
+			return
+		}
+
+		// Transfer tokens to new treasury
+		if err := binomToken.Transfer("treasury", request.TreasuryAddress, treasuryAmount); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to transfer to treasury: %v", err)})
+			return
+		}
+
+		// Transfer tokens to community
+		if err := binomToken.Transfer("treasury", request.CommunityAddress, communityAmount); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to transfer to community: %v", err)})
+			return
+		}
+
+		// Log the distribution
+		auditService.LogEvent(
+			audit.InfoLevel,
+			"InitialTokenDistribution",
+			fmt.Sprintf("Distributed tokens: %f to founder, %f to treasury, %f to community",
+				founderAmount, treasuryAmount, communityAmount),
+			map[string]interface{}{
+				"founder":   request.FounderAddress,
+				"treasury":  request.TreasuryAddress,
+				"community": request.CommunityAddress,
+			},
+		)
+
+		c.JSON(http.StatusOK, gin.H{
+			"status": "success",
+			"distribution": map[string]interface{}{
+				"founder": map[string]interface{}{
+					"address": request.FounderAddress,
+					"amount":  founderAmount,
+					"percent": request.FounderPercent,
+				},
+				"treasury": map[string]interface{}{
+					"address": request.TreasuryAddress,
+					"amount":  treasuryAmount,
+					"percent": request.TreasuryPercent,
+				},
+				"community": map[string]interface{}{
+					"address": request.CommunityAddress,
+					"amount":  communityAmount,
+					"percent": request.CommunityPercent,
+				},
+			},
+		})
+	})
+
 	// Faucet endpoint to request initial tokens
 	router.POST("/faucet", func(c *gin.Context) {
 		var request struct {
-			Address string  `json:"address"`
-			Amount  float64 `json:"amount"`
+			Address  string  `json:"address"`
+			Amount   float64 `json:"amount"`
+			AdminKey string  `json:"adminKey,omitempty"`
 		}
 
 		if err := c.ShouldBindJSON(&request); err != nil {
@@ -198,8 +308,11 @@ func main() {
 			return
 		}
 
-		// Validate amount
-		if request.Amount <= 0 || request.Amount > 10000 {
+		// Check if this is an admin request
+		isAdmin := request.AdminKey == "binomena-founder-key-2025"
+
+		// Validate amount (skip limit for admin)
+		if !isAdmin && (request.Amount <= 0 || request.Amount > 10000) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Amount must be between 0 and 10000"})
 			return
 		}
