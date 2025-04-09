@@ -6,5 +6,13 @@ services:
     startCommand: ./start.sh
     envVars:
       - key: PORT
-        value: 8080
+        value: 10000
+      - key: NODE_ID
+        value: genesis-node
+      - key: DATA_DIR
+        value: /opt/render/project/src/data
+    disk:
+      name: blockchain-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 10
     autoDeploy: true
