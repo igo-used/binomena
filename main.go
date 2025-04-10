@@ -167,6 +167,8 @@ func main() {
 
 	// Setup API server
 	router := gin.Default()
+	// Add CORS middleware
+	router.Use(corsMiddleware())
 
 	// API endpoints
 	router.GET("/status", func(c *gin.Context) {
