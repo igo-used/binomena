@@ -8,13 +8,14 @@ import (
 
 // Node represents a node in the Binomena network
 type Node struct {
-	blockchain *Blockchain
-	consensus  Consensus
-	token      Token
-	peers      map[string]Peer
-	isRunning  bool
-	mu         sync.RWMutex
-	stopChan   chan struct{}
+	blockchain       *Blockchain
+	consensus        Consensus
+	token            Token
+	peers            map[string]Peer
+	isRunning        bool
+	mu               sync.RWMutex
+	stopChan         chan struct{}
+	validatorAddress string // Add this field to the existing struct
 }
 
 // Consensus interface for consensus mechanisms
@@ -38,14 +39,15 @@ type Peer struct {
 }
 
 // NewNode creates a new node
-func NewNode(blockchain *Blockchain, consensus Consensus, token Token) *Node {
+func NewNode(blockchain *Blockchain, consensus Consensus, token Token, validatorAddress string) *Node {
 	return &Node{
-		blockchain: blockchain,
-		consensus:  consensus,
-		token:      token,
-		peers:      make(map[string]Peer),
-		isRunning:  false,
-		stopChan:   make(chan struct{}),
+		blockchain:       blockchain,
+		consensus:        consensus,
+		token:            token,
+		peers:            make(map[string]Peer),
+		isRunning:        false,
+		stopChan:         make(chan struct{}),
+		validatorAddress: validatorAddress,
 	}
 }
 
@@ -147,7 +149,7 @@ func (n *Node) createNewBlock() {
 		PreviousHash: lastBlock.Hash,
 		Timestamp:    time.Now().Unix(),
 		Data:         transactions,
-		Validator:    "self", // In a real implementation, this would be determined by the consensus mechanism
+		Validator:    n.validatorAddress, // Use the founder's address as validator
 	}
 
 	// Calculate hash

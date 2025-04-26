@@ -42,6 +42,7 @@ func main() {
 	p2pPort := flag.Int("p2p-port", 9000, "P2P server port")
 	bootstrapNode := flag.String("bootstrap", "", "Bootstrap node address (optional)")
 	nodeID := flag.String("id", "", "Node identifier (optional)")
+	founderAddress := flag.String("founder", "AdNebc206d26b086b0e5575883846fb70a446dfbc64b", "Founder wallet address for validation")
 	flag.Parse()
 
 	// Set node identifier
@@ -143,8 +144,8 @@ func main() {
 	// Initialize the audit service
 	auditService := audit.NewAuditService(blockchain)
 
-	// Create a new node
-	node := core.NewNode(blockchain, nodeSwift, binomToken)
+	// Create a new node with the founder address as validator
+	node := core.NewNode(blockchain, nodeSwift, binomToken, *founderAddress)
 
 	// Start the P2P network
 	p2pAddress := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *p2pPort)
@@ -179,6 +180,7 @@ func main() {
 			"peers":       p2pNode.GetPeerCount(),
 			"wallets":     p2pNode.GetWalletCount(),
 			"tokenSupply": binomToken.GetCirculatingSupply(),
+			"validator":   *founderAddress,
 		})
 	})
 
@@ -750,6 +752,7 @@ func main() {
 	fmt.Printf("Binomena blockchain node '%s' started\n", nodeName)
 	fmt.Printf("API server running on http://localhost:%d\n", *apiPort)
 	fmt.Printf("P2P node running on %s\n", p2pAddress)
+	fmt.Printf("Using validator address: %s\n", *founderAddress)
 
 	// Wait for interrupt signal to gracefully shutdown
 	quit := make(chan os.Signal, 1)
