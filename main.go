@@ -317,6 +317,15 @@ func main() {
 		})
 	})
 
+	// Health check endpoint with trailing space (Render compatibility)
+	router.GET("/health ", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "healthy",
+			"timestamp": time.Now().Unix(),
+			"node":      nodeName,
+		})
+	})
+
 	// API endpoints
 	router.GET("/status", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
