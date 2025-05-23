@@ -46,10 +46,12 @@ func (a *AuditServiceDB) LogEvent(level SecurityLevel, eventType, message string
 		dataBytes, err := json.Marshal(data)
 		if err != nil {
 			log.Printf("Failed to serialize audit data: %v", err)
-			dataJSON = fmt.Sprintf("Error serializing data: %v", err)
+			dataJSON = "{\"error\":\"serialization_failed\"}"
 		} else {
 			dataJSON = string(dataBytes)
 		}
+	} else {
+		dataJSON = "null"
 	}
 
 	// Create audit event for database
