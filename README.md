@@ -37,7 +37,7 @@ Binomena is a high-performance blockchain platform built with Go, featuring adva
 ## 🎯 Live Deployments
 
 ### PaperDollar USD Stablecoin ✅
-- **Contract ID**: `AdNe235e7e48b029a244c36daf0e9ef918e765b849bab4a97443ba820408b9bd`
+- **Contract ID**: `AdNe4955f9b149fa3fd253d85937c6eb67c4c28178f4777cafad96903a68d079`
 - **Type**: USD-pegged stablecoin
 - **Collateralization**: 150% minimum ratio
 - **Features**: Minting, burning, blacklist/whitelist, emergency pause
@@ -118,7 +118,7 @@ curl http://localhost:8080/status
 curl -X POST http://localhost:8080/contracts/call \
   -H "Content-Type: application/json" \
   -d '{
-    "contractId": "AdNe235e7e48b029a244c36daf0e9ef918e765b849bab4a97443ba820408b9bd",
+    "contractId": "AdNe4955f9b149fa3fd253d85937c6eb67c4c28178f4777cafad96903a68d079",
     "function": "getTotalSupply",
     "parameters": []
   }'
@@ -254,7 +254,7 @@ curl -X POST http://localhost:8080/contracts/deploy \
 curl -X POST http://localhost:8080/contracts/call \
   -H "Content-Type: application/json" \
   -d '{
-    "contractId": "AdNe235e7e48b029a244c36daf0e9ef918e765b849bab4a97443ba820408b9bd",
+    "contractId": "AdNe4955f9b149fa3fd253d85937c6eb67c4c28178f4777cafad96903a68d079",
     "function": "addCollateral",
     "parameters": [100000, 0],
     "caller": "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534",
@@ -269,7 +269,7 @@ curl -X POST http://localhost:8080/contracts/call \
 curl -X POST http://localhost:8080/contracts/call \
   -H "Content-Type: application/json" \
   -d '{
-    "contractId": "AdNe235e7e48b029a244c36daf0e9ef918e765b849bab4a97443ba820408b9bd",
+    "contractId": "AdNe4955f9b149fa3fd253d85937c6eb67c4c28178f4777cafad96903a68d079",
     "function": "mint",
     "parameters": ["AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534", 50000],
     "caller": "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534",
@@ -283,7 +283,7 @@ curl -X POST http://localhost:8080/contracts/call \
 curl -X POST http://localhost:8080/contracts/call \
   -H "Content-Type: application/json" \
   -d '{
-    "contractId": "AdNe235e7e48b029a244c36daf0e9ef918e765b849bab4a97443ba820408b9bd",
+    "contractId": "AdNe4955f9b149fa3fd253d85937c6eb67c4c28178f4777cafad96903a68d079",
     "function": "transfer",
     "parameters": ["AdNe987654321...", 1000],
     "caller": "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534",
@@ -440,8 +440,6 @@ curl http://localhost:8080/health
 
 ---
 
-
-
 ## 🤝 Contributing
 
 We welcome contributions from the community! Here's how to get started:
@@ -507,7 +505,7 @@ X: Binomena Community
 - ✅ Event emission for complete audit trails
 - ✅ Production-ready on mainnet
 
-**Contract ID**: `AdNe235e7e48b029a244c36daf0e9ef918e765b849bab4a97443ba820408b9bd`
+**Contract ID**: `AdNe4955f9b149fa3fd253d85937c6eb67c4c28178f4777cafad96903a68d079`
 
 ---
 

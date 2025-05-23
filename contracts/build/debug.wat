@@ -24,6 +24,7 @@
  (type $22 (func (param i32 i64 i32) (result i32)))
  (import "env" "memory" (memory $0 1))
  (import "env" "abort" (func $~lib/builtins/abort (param i32 i32 i32 i32)))
+ (global $assembly/contract/Context._caller (mut i32) (i32.const 32))
  (global $assembly/contract/Context.caller (mut i32) (i32.const 32))
  (global $assembly/stablecoin/OWNER i32 (i32.const 64))
  (global $assembly/stablecoin/TOTAL_SUPPLY i32 (i32.const 96))
@@ -478,7 +479,7 @@
   if
    local.get $message
    i32.const 800
-   i32.const 35
+   i32.const 123
    i32.const 9
    call $~lib/builtins/abort
    unreachable
