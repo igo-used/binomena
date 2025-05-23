@@ -1,5 +1,14 @@
 // AssemblyScript smart contract
 
+import { PaperDollar } from "./stablecoin";
+
+export { PaperDollar };
+
+// Contract factory function
+export function createPaperDollar(): PaperDollar {
+  return new PaperDollar();
+}
+
 // Export a function that adds two numbers
 export function add(a: i32, b: i32): i32 {
     return a + b;
