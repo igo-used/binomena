@@ -256,15 +256,28 @@ func main() {
 		}
 	}
 
-	// For database storage, we'll need a different approach - for now use nil check
+	// For database storage, create a working API with database backend
 	if contractAPI == nil {
-		log.Println("Warning: Contract API not fully initialized for database backend")
-		// Create a minimal working API for database backend
-		if fileToken, ok := binomToken.(*token.BinomToken); ok {
-			// Create temporary file storage for API
-			tempStorage, _ := smartcontract.NewContractStorage("./temp_contracts")
-			tempState, _ := smartcontract.NewContractState("./temp_contracts")
-			contractAPI = smartcontract.NewContractAPI(wasmVM, tempStorage, tempState, fileToken)
+		log.Println("Creating contract API for database backend")
+		// Create temporary file storage for API until database VM is implemented
+		tempStorage, err := smartcontract.NewContractStorage("./temp_contracts")
+		if err != nil {
+			log.Printf("Warning: Failed to create temp contract storage: %v", err)
+		}
+		tempState, err := smartcontract.NewContractState("./temp_contracts")
+		if err != nil {
+			log.Printf("Warning: Failed to create temp contract state: %v", err)
+		}
+
+		// Create a temporary file token for API
+		tempToken := token.NewBinomToken()
+
+		// Initialize with temporary implementations
+		if tempStorage != nil && tempState != nil && tempToken != nil {
+			contractAPI = smartcontract.NewContractAPI(wasmVM, tempStorage, tempState, tempToken)
+			log.Println("Contract API initialized with temporary file-based storage")
+		} else {
+			log.Println("Warning: Failed to initialize contract API")
 		}
 	}
 
