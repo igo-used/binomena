@@ -442,6 +442,10 @@ func convertToWasmType(value interface{}) interface{} {
 	case float32:
 		return v
 	case float64:
+		// JSON numbers come as float64, convert to int32 if it's a whole number
+		if v == float64(int32(v)) {
+			return int32(v)
+		}
 		return v
 	case bool:
 		if v {
@@ -456,6 +460,13 @@ func convertToWasmType(value interface{}) interface{} {
 		// Try to convert to int32 as default
 		if i, ok := value.(int); ok {
 			return int32(i)
+		}
+		// Handle JSON numbers that come as float64
+		if f, ok := value.(float64); ok {
+			if f == float64(int32(f)) {
+				return int32(f)
+			}
+			return f
 		}
 		return int32(0)
 	}
