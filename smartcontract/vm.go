@@ -347,8 +347,45 @@ func validateWasmCode(code []byte, level SecurityLevel) error {
 func createSecureImportObject(store *wasmer.Store, level SecurityLevel) *wasmer.ImportObject {
 	importObject := wasmer.NewImportObject()
 
-	// Add secure environment functions based on security level
-	// This is a simplified version; a real implementation would have more functions
+	// Add abort function required by AssemblyScript
+	abortFunc := wasmer.NewFunction(
+		store,
+		wasmer.NewFunctionType(
+			wasmer.NewValueTypes(wasmer.I32, wasmer.I32, wasmer.I32, wasmer.I32),
+			wasmer.NewValueTypes(),
+		),
+		func(args []wasmer.Value) ([]wasmer.Value, error) {
+			// Handle abort - log the error and continue
+			message := args[0].I32()
+			fileName := args[1].I32()
+			lineNumber := args[2].I32()
+			columnNumber := args[3].I32()
+
+			fmt.Printf("Contract abort: message=%d, file=%d, line=%d, col=%d\n",
+				message, fileName, lineNumber, columnNumber)
+
+			return []wasmer.Value{}, nil
+		},
+	)
+
+	// Add trace function for debugging (optional)
+	traceFunc := wasmer.NewFunction(
+		store,
+		wasmer.NewFunctionType(
+			wasmer.NewValueTypes(wasmer.I32, wasmer.I32, wasmer.I32, wasmer.I32),
+			wasmer.NewValueTypes(),
+		),
+		func(args []wasmer.Value) ([]wasmer.Value, error) {
+			// Handle trace function
+			return []wasmer.Value{}, nil
+		},
+	)
+
+	// Register functions in the env namespace
+	importObject.Register("env", map[string]wasmer.IntoExtern{
+		"abort": abortFunc,
+		"trace": traceFunc,
+	})
 
 	return importObject
 }
