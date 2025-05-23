@@ -9,9 +9,13 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        value: postgresql://binomuser:EILWycLJTjfxQgFtUWpTGISbSycB3Ubn@dpg-d0n585mmcj7s7397fpsg-a/binomena_bq
+        fromDatabase:
+          name: binomena-db
+          property: connectionString
       - key: DB_PASSWORD
-        value: EILWycLJTjfxQgFtUWpTGISbSycB3Ubn
+        fromDatabase:
+          name: binomena-db
+          property: password
       - key: PORT
         value: 10000
       - key: NODE_ID
@@ -21,3 +25,10 @@ services:
       - key: GIN_MODE
         value: release
     autoDeploy: true
+
+databases:
+  - name: binomena-db
+    databaseName: binomena_bq
+    user: binomuser
+    region: frankfurt
+    plan: starter
