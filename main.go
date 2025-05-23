@@ -143,8 +143,18 @@ func main() {
 		log.Println("Using file-backed token system")
 	}
 
-	// Initialize the NodeSwift consensus mechanism
-	nodeSwift := consensus.NewNodeSwift()
+	// Initialize the DPoS consensus mechanism with founder and community addresses
+	founderAddress := "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534"
+	communityAddress := "AdNebaefd75d426056bffbc622bd9f334ed89450efae"
+
+	dposConsensus := consensus.NewDPoSConsensus(founderAddress, communityAddress)
+
+	// Register founder as the first delegate with their 400M BNM stake
+	if err := dposConsensus.RegisterDelegate(founderAddress, 400000000.0); err != nil {
+		log.Printf("Warning: Failed to register founder as delegate: %v", err)
+	} else {
+		log.Println("Founder registered as first delegate with 400M BNM stake")
+	}
 
 	// Initialize smart contract system based on backend choice
 	var wasmVM *smartcontract.WasmVM
@@ -274,7 +284,7 @@ func main() {
 	}
 
 	// Create node
-	node := core.NewNode(blockchain, nodeSwift, binomToken, "genesis")
+	node := core.NewNode(blockchain, dposConsensus, binomToken, "genesis")
 
 	// Start the P2P network
 	p2pAddress := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *p2pPort)
@@ -567,15 +577,39 @@ func main() {
 			return
 		}
 
-		// Check balance
+		// Calculate fee (0.1% of transaction amount)
+		feeRate := 0.001
+		transactionFee := request.Amount * feeRate
+		totalRequired := request.Amount + transactionFee
+
+		// Check balance (sender pays both amount and fee)
 		balance := binomToken.GetBalance(request.From)
-		if balance < request.Amount {
+		if balance < totalRequired {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":    "insufficient balance",
 				"balance":  balance,
-				"required": request.Amount,
+				"required": totalRequired,
+				"amount":   request.Amount,
+				"fee":      transactionFee,
 			})
 			return
+		}
+
+		// Transfer the exact amount to receiver
+		if err := binomToken.Transfer(request.From, request.To, request.Amount); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Collect fee from sender separately
+		if err := binomToken.Transfer(request.From, "treasury", transactionFee); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to collect fee: " + err.Error()})
+			return
+		}
+
+		// Distribute fees according to DPoS rules
+		if err := dposConsensus.DistributeFees(transactionFee, binomToken); err != nil {
+			log.Printf("Failed to distribute fees: %v", err)
 		}
 
 		// Create transaction
@@ -599,11 +633,20 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "transaction submitted",
 			"txId":   tx.ID,
-			"node":   nodeName,
+			"amount": request.Amount,
+			"fee":    transactionFee,
+			"feeDistribution": gin.H{
+				"delegates": transactionFee * 0.6,
+				"burned":    transactionFee * 0.3,
+				"community": transactionFee * 0.05,
+				"founder":   transactionFee * 0.05,
+			},
+			"node": nodeName,
 		})
 
 		// Log transaction
-		logAuditEvent(auditService, audit.InfoLevel, "TransactionSubmitted", fmt.Sprintf("Transaction %s submitted from %s to %s for %f BNM", tx.ID, tx.From, tx.To, tx.Amount), tx)
+		logAuditEvent(auditService, audit.InfoLevel, "TransactionSubmitted",
+			fmt.Sprintf("Transaction %s: %s sent %.6f BNM to %s (fee: %.6f BNM)", tx.ID, tx.From, tx.Amount, tx.To, transactionFee), tx)
 	})
 
 	// Get peers endpoint
@@ -808,6 +851,133 @@ func main() {
 			"issues": len(criticalEvents),
 			"events": criticalEvents,
 		})
+	})
+
+	// DPoS endpoints
+	router.POST("/delegates/register", func(c *gin.Context) {
+		var request struct {
+			Address    string  `json:"address" binding:"required"`
+			Stake      float64 `json:"stake" binding:"required"`
+			PrivateKey string  `json:"privateKey" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Verify wallet ownership
+		senderWallet, err := wallet.ImportPrivateKey(request.PrivateKey)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid private key"})
+			return
+		}
+
+		if senderWallet.Address != request.Address {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Private key does not match address"})
+			return
+		}
+
+		// Check if address has enough balance for stake
+		balance := binomToken.GetBalance(request.Address)
+		if balance < request.Stake {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":    "Insufficient balance for stake",
+				"balance":  balance,
+				"required": request.Stake,
+			})
+			return
+		}
+
+		// Register delegate
+		if err := dposConsensus.RegisterDelegate(request.Address, request.Stake); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": fmt.Sprintf("Delegate registered with %.2f BNM stake", request.Stake),
+			"address": request.Address,
+		})
+
+		logAuditEvent(auditService, audit.InfoLevel, "DelegateRegistered",
+			fmt.Sprintf("New delegate registered: %s with stake %.2f BNM", request.Address, request.Stake), nil)
+	})
+
+	router.POST("/delegates/vote", func(c *gin.Context) {
+		var request struct {
+			VoterAddress    string  `json:"voterAddress" binding:"required"`
+			DelegateAddress string  `json:"delegateAddress" binding:"required"`
+			Amount          float64 `json:"amount" binding:"required"`
+			PrivateKey      string  `json:"privateKey" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Verify wallet ownership
+		voterWallet, err := wallet.ImportPrivateKey(request.PrivateKey)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid private key"})
+			return
+		}
+
+		if voterWallet.Address != request.VoterAddress {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Private key does not match voter address"})
+			return
+		}
+
+		// Check if voter has enough balance
+		balance := binomToken.GetBalance(request.VoterAddress)
+		if balance < request.Amount {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":    "Insufficient balance for vote",
+				"balance":  balance,
+				"required": request.Amount,
+			})
+			return
+		}
+
+		// Vote for delegate
+		if err := dposConsensus.VoteForDelegate(request.VoterAddress, request.DelegateAddress, request.Amount); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": fmt.Sprintf("Voted %.2f BNM for delegate %s", request.Amount, request.DelegateAddress),
+		})
+
+		logAuditEvent(auditService, audit.InfoLevel, "DelegateVote",
+			fmt.Sprintf("Vote cast: %s voted %.2f BNM for delegate %s", request.VoterAddress, request.Amount, request.DelegateAddress), nil)
+	})
+
+	router.GET("/delegates", func(c *gin.Context) {
+		delegates := dposConsensus.GetDelegates()
+
+		c.JSON(http.StatusOK, gin.H{
+			"delegates":    delegates,
+			"count":        len(delegates),
+			"maxDelegates": 21,
+		})
+	})
+
+	router.GET("/delegates/:address", func(c *gin.Context) {
+		address := c.Param("address")
+		delegates := dposConsensus.GetDelegates()
+
+		for _, delegate := range delegates {
+			if delegate.Address == address {
+				c.JSON(http.StatusOK, delegate)
+				return
+			}
+		}
+
+		c.JSON(http.StatusNotFound, gin.H{"error": "Delegate not found"})
 	})
 
 	// Register contract API routes

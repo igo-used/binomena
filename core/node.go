@@ -105,25 +105,7 @@ func (n *Node) SubmitTransaction(tx Transaction) error {
 		return fmt.Errorf("invalid transaction")
 	}
 
-	// Check if sender has enough balance
-	senderBalance := n.token.GetBalance(tx.From)
-	if senderBalance < tx.Amount {
-		return fmt.Errorf("insufficient balance")
-	}
-
-	// Apply burn ratio (0.1%)
-	burnAmount := tx.Amount * 0.001
-	transferAmount := tx.Amount - burnAmount
-
-	// Transfer tokens
-	if err := n.token.Transfer(tx.From, tx.To, transferAmount); err != nil {
-		return err
-	}
-
-	// Burn tokens
-	n.token.Burn(burnAmount)
-
-	// Add transaction to blockchain
+	// Add transaction to blockchain (fee handling is done at API level)
 	n.blockchain.AddTransaction(tx)
 
 	return nil
@@ -163,13 +145,16 @@ func (n *Node) createNewBlock() {
 	// Get the last block
 	lastBlock := n.blockchain.GetLastBlock()
 
+	// Get the current validator from consensus
+	validator := n.consensus.SelectValidator([]string{}, map[string]float64{})
+
 	// Create new block
 	newBlock := Block{
 		Index:        lastBlock.Index + 1,
 		PreviousHash: lastBlock.Hash,
 		Timestamp:    time.Now().Unix(),
 		Data:         transactions,
-		Validator:    n.validatorAddress, // Use the founder's address as validator
+		Validator:    validator,
 	}
 
 	// Calculate hash
@@ -179,6 +164,6 @@ func (n *Node) createNewBlock() {
 	if err := n.blockchain.AddBlock(newBlock); err != nil {
 		fmt.Printf("Error adding block: %v\n", err)
 	} else {
-		fmt.Printf("Block #%d added to the blockchain\n", newBlock.Index)
+		fmt.Printf("Block #%d produced by validator %s\n", newBlock.Index, validator)
 	}
 }
