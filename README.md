@@ -162,4 +162,4 @@ For a detailed technical overview of Binomena, please refer to our [white paper]
 - Website: [https://binomena.com](https://binomena.com/)
 - Email: [info@binomena.com](team@binomena.com)
 - Founder Email: [contact@Founder](juxhino.kap@yahoo.com)
-- Telegram: [Binomena Community](https://t.me/binomchain)
+- X: [Binomena Community](https://x.com/BinomChain)

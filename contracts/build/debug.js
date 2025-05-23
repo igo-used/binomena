@@ -21,6 +21,113 @@ async function instantiate(module, imports = {}) {
       // assembly/index/createPaperDollar() => assembly/stablecoin/PaperDollar
       return __liftInternref(exports.createPaperDollar() >>> 0);
     },
+    getBalance(address) {
+      // assembly/index/getBalance(~lib/string/String) => u64
+      address = __lowerString(address) || __notnull();
+      return BigInt.asUintN(64, exports.getBalance(address));
+    },
+    getTotalSupply() {
+      // assembly/index/getTotalSupply() => u64
+      return BigInt.asUintN(64, exports.getTotalSupply());
+    },
+    transfer(to, amount) {
+      // assembly/index/transfer(~lib/string/String, u64) => bool
+      to = __lowerString(to) || __notnull();
+      amount = amount || 0n;
+      return exports.transfer(to, amount) != 0;
+    },
+    mint(to, amount) {
+      // assembly/index/mint(~lib/string/String, u64) => bool
+      to = __lowerString(to) || __notnull();
+      amount = amount || 0n;
+      return exports.mint(to, amount) != 0;
+    },
+    burn(amount) {
+      // assembly/index/burn(u64) => bool
+      amount = amount || 0n;
+      return exports.burn(amount) != 0;
+    },
+    addMinter(address) {
+      // assembly/index/addMinter(~lib/string/String) => bool
+      address = __lowerString(address) || __notnull();
+      return exports.addMinter(address) != 0;
+    },
+    removeMinter(address) {
+      // assembly/index/removeMinter(~lib/string/String) => bool
+      address = __lowerString(address) || __notnull();
+      return exports.removeMinter(address) != 0;
+    },
+    isMinter(address) {
+      // assembly/index/isMinter(~lib/string/String) => bool
+      address = __lowerString(address) || __notnull();
+      return exports.isMinter(address) != 0;
+    },
+    blacklist(address) {
+      // assembly/index/blacklist(~lib/string/String) => bool
+      address = __lowerString(address) || __notnull();
+      return exports.blacklist(address) != 0;
+    },
+    unblacklist(address) {
+      // assembly/index/unblacklist(~lib/string/String) => bool
+      address = __lowerString(address) || __notnull();
+      return exports.unblacklist(address) != 0;
+    },
+    isBlacklisted(address) {
+      // assembly/index/isBlacklisted(~lib/string/String) => bool
+      address = __lowerString(address) || __notnull();
+      return exports.isBlacklisted(address) != 0;
+    },
+    addCollateral(amount, collateralType) {
+      // assembly/index/addCollateral(u64, u32) => bool
+      amount = amount || 0n;
+      return exports.addCollateral(amount, collateralType) != 0;
+    },
+    removeCollateral(amount) {
+      // assembly/index/removeCollateral(u64) => bool
+      amount = amount || 0n;
+      return exports.removeCollateral(amount) != 0;
+    },
+    getCollateralBalance(address, collateralType) {
+      // assembly/index/getCollateralBalance(~lib/string/String, u32) => u64
+      address = __lowerString(address) || __notnull();
+      return BigInt.asUintN(64, exports.getCollateralBalance(address, collateralType));
+    },
+    getCollateralType(address) {
+      // assembly/index/getCollateralType(~lib/string/String) => u32
+      address = __lowerString(address) || __notnull();
+      return exports.getCollateralType(address) >>> 0;
+    },
+    setCollateralRatio(ratio) {
+      // assembly/index/setCollateralRatio(u64) => bool
+      ratio = ratio || 0n;
+      return exports.setCollateralRatio(ratio) != 0;
+    },
+    getCollateralRatio() {
+      // assembly/index/getCollateralRatio() => u64
+      return BigInt.asUintN(64, exports.getCollateralRatio());
+    },
+    setBinomTokenAddress(address) {
+      // assembly/index/setBinomTokenAddress(~lib/string/String) => bool
+      address = __lowerString(address) || __notnull();
+      return exports.setBinomTokenAddress(address) != 0;
+    },
+    getFiatReserve() {
+      // assembly/index/getFiatReserve() => u64
+      return BigInt.asUintN(64, exports.getFiatReserve());
+    },
+    pause() {
+      // assembly/index/pause() => bool
+      return exports.pause() != 0;
+    },
+    unpause() {
+      // assembly/index/unpause() => bool
+      return exports.unpause() != 0;
+    },
+    transferOwnership(newOwner) {
+      // assembly/index/transferOwnership(~lib/string/String) => bool
+      newOwner = __lowerString(newOwner) || __notnull();
+      return exports.transferOwnership(newOwner) != 0;
+    },
     emitTransfer(from, to, amount) {
       // assembly/stablecoin/emitTransfer(~lib/string/String, ~lib/string/String, u64) => void
       from = __retain(__lowerString(from) || __notnull());
@@ -110,6 +217,28 @@ async function instantiate(module, imports = {}) {
 export const {
   memory,
   createPaperDollar,
+  getBalance,
+  getTotalSupply,
+  transfer,
+  mint,
+  burn,
+  addMinter,
+  removeMinter,
+  isMinter,
+  blacklist,
+  unblacklist,
+  isBlacklisted,
+  addCollateral,
+  removeCollateral,
+  getCollateralBalance,
+  getCollateralType,
+  setCollateralRatio,
+  getCollateralRatio,
+  setBinomTokenAddress,
+  getFiatReserve,
+  pause,
+  unpause,
+  transferOwnership,
   add,
   multiply,
   store,
