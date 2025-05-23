@@ -488,8 +488,8 @@ This project is licensed under the **Apache License 2.0** - see the [LICENSE](LI
 
 Website: https://binomena.com
 Email: info@binomena.com
-Founder Email: contact@Founder
-X: Binomena Community
+Founder Email: juxhino.kap@yahoo.com
+X: Binomena Community 
 
 ---
 
