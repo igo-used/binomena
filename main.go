@@ -269,13 +269,38 @@ func main() {
 			log.Printf("Warning: Failed to create temp contract state: %v", err)
 		}
 
-		// Create a temporary file token for API
-		tempToken := token.NewBinomToken()
+		// Use the actual database token system instead of temporary
+		// Initialize with database token for balance access
+		if tempStorage != nil && tempState != nil {
+			// Create a wrapper for database token that implements the file token interface
+			if dbToken, ok := binomToken.(*token.BinomTokenDB); ok {
+				// Create temporary file token and sync balances for contract API
+				tempToken := token.NewBinomToken()
 
-		// Initialize with temporary implementations
-		if tempStorage != nil && tempState != nil && tempToken != nil {
-			contractAPI = smartcontract.NewContractAPI(wasmVM, tempStorage, tempState, tempToken)
-			log.Println("Contract API initialized with temporary file-based storage")
+				// Sync key balances from database to temp token for contract operations
+				founderBalance := dbToken.GetBalance("AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534")
+				treasuryBalance := dbToken.GetBalance("AdNec13f53bb89865c7e2be8ff9aa43e84e26d226bf3")
+				communityBalance := dbToken.GetBalance("AdNebaefd75d426056bffbc622bd9f334ed89450efae")
+
+				// Transfer from treasury to sync balances in temp token
+				if founderBalance > 0 {
+					tempToken.Transfer("treasury", "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534", founderBalance)
+				}
+				if treasuryBalance > 0 {
+					tempToken.Transfer("treasury", "AdNec13f53bb89865c7e2be8ff9aa43e84e26d226bf3", treasuryBalance)
+				}
+				if communityBalance > 0 {
+					tempToken.Transfer("treasury", "AdNebaefd75d426056bffbc622bd9f334ed89450efae", communityBalance)
+				}
+
+				contractAPI = smartcontract.NewContractAPI(wasmVM, tempStorage, tempState, tempToken)
+				log.Printf("Contract API initialized with synced balances: Founder=%.2f, Treasury=%.2f", founderBalance, treasuryBalance)
+			} else {
+				// Fallback to temporary token
+				tempToken := token.NewBinomToken()
+				contractAPI = smartcontract.NewContractAPI(wasmVM, tempStorage, tempState, tempToken)
+				log.Println("Contract API initialized with temporary file-based storage")
+			}
 		} else {
 			log.Println("Warning: Failed to initialize contract API")
 		}
