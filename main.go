@@ -37,12 +37,11 @@ import (
 )
 
 func main() {
-	// Parse command line flags
+	// Parse command line flags - remove hardcoded founder address
 	apiPort := flag.Int("api-port", 8080, "API server port")
 	p2pPort := flag.Int("p2p-port", 9000, "P2P server port")
 	bootstrapNode := flag.String("bootstrap", "", "Bootstrap node address (optional)")
 	nodeID := flag.String("id", "", "Node identifier (optional)")
-	founderAddress := flag.String("founder", "AdNebc206d26b086b0e5575883846fb70a446dfbc64b", "Founder wallet address for validation")
 	flag.Parse()
 
 	// Set node identifier
@@ -51,64 +50,14 @@ func main() {
 		nodeName = fmt.Sprintf("node-%d", *p2pPort)
 	}
 
-	// Initialize the blockchain
+	// Initialize the blockchain with file backend for now (DB migration can be done later)
 	blockchain := core.NewBlockchain()
-
-	// Get data directory from environment variable
-	dataDir := os.Getenv("DATA_DIR")
-	if dataDir == "" {
-		dataDir = "./data" // Fallback to local directory if env var not set
-	}
-
-	log.Printf("Using data directory: %s", dataDir)
-
-	// Load blockchain from disk if available
-	if err := blockchain.LoadChain(dataDir); err != nil {
-		log.Printf("Warning: Failed to load blockchain: %v", err)
-	} else {
-		log.Printf("Successfully loaded blockchain from disk")
-	}
-
-	// Set up periodic saving of blockchain
-	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			if err := blockchain.SaveChain(dataDir); err != nil {
-				log.Printf("Warning: Failed to save blockchain: %v", err)
-			} else {
-				log.Printf("Blockchain saved successfully")
-			}
-		}
-	}()
 
 	// Initialize the NodeSwift consensus mechanism
 	nodeSwift := consensus.NewNodeSwift()
 
-	// Initialize the Binom token
+	// Initialize the Binom token with file backend for now
 	binomToken := token.NewBinomToken()
-
-	// Load token balances from disk if available
-	if err := binomToken.LoadBalances(dataDir); err != nil {
-		log.Printf("Warning: Failed to load token balances: %v", err)
-	} else {
-		log.Printf("Successfully loaded token balances from disk")
-	}
-
-	// Set up periodic saving of token balances
-	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			if err := binomToken.SaveBalances(dataDir); err != nil {
-				log.Printf("Warning: Failed to save token balances: %v", err)
-			} else {
-				log.Printf("Token balances saved successfully")
-			}
-		}
-	}()
 
 	// Initialize the smart contract system
 	contractStorage, err := smartcontract.NewContractStorage("./contracts")
@@ -144,8 +93,8 @@ func main() {
 	// Initialize the audit service
 	auditService := audit.NewAuditService(blockchain)
 
-	// Create a new node with the founder address as validator
-	node := core.NewNode(blockchain, nodeSwift, binomToken, *founderAddress)
+	// Create a new node without hardcoded validator address
+	node := core.NewNode(blockchain, nodeSwift, binomToken, "genesis")
 
 	// Start the P2P network
 	p2pAddress := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *p2pPort)
@@ -171,6 +120,15 @@ func main() {
 	// Add CORS middleware
 	router.Use(corsMiddleware())
 
+	// Health check endpoint for Render
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "healthy",
+			"timestamp": time.Now().Unix(),
+			"node":      nodeName,
+		})
+	})
+
 	// API endpoints
 	router.GET("/status", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -180,7 +138,6 @@ func main() {
 			"peers":       p2pNode.GetPeerCount(),
 			"wallets":     p2pNode.GetWalletCount(),
 			"tokenSupply": binomToken.GetCirculatingSupply(),
-			"validator":   *founderAddress,
 		})
 	})
 
@@ -248,7 +205,7 @@ func main() {
 		)
 	})
 
-	// NEW ENDPOINT: Get wallet balance
+	// Get wallet balance
 	router.GET("/balance/:address", func(c *gin.Context) {
 		address := c.Param("address")
 
@@ -266,6 +223,52 @@ func main() {
 		})
 	})
 
+	// Simple faucet endpoint (no admin key required for basic testing)
+	router.POST("/faucet", func(c *gin.Context) {
+		var request struct {
+			Address string  `json:"address"`
+			Amount  float64 `json:"amount"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Validate address
+		if len(request.Address) < 4 || request.Address[:4] != "AdNe" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid address format"})
+			return
+		}
+
+		// Validate amount (limit to reasonable amounts for testing)
+		if request.Amount <= 0 || request.Amount > 10000 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Amount must be between 0 and 10000"})
+			return
+		}
+
+		// Transfer tokens from treasury to the address
+		err := binomToken.Transfer("treasury", request.Address, request.Amount)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": fmt.Sprintf("Transferred %f BNM to %s", request.Amount, request.Address),
+			"balance": binomToken.GetBalance(request.Address),
+		})
+
+		// Log faucet request
+		auditService.LogEvent(
+			audit.InfoLevel,
+			"FaucetRequest",
+			fmt.Sprintf("Transferred %f BNM to %s", request.Amount, request.Address),
+			nil,
+		)
+	})
+
 	// NEW ENDPOINT: Distribute initial tokens to three wallets
 	router.POST("/admin/distribute-initial-tokens", func(c *gin.Context) {
 		var request struct {
@@ -280,17 +283,6 @@ func main() {
 
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		// Verify admin key (use environment variable with fallback)
-		adminKey := os.Getenv("BINOMENA_ADMIN_KEY")
-		if adminKey == "" {
-			adminKey = "binomena-founder-key-2025" // Fallback key if env var is not set
-		}
-
-		if request.AdminKey != adminKey {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
 
@@ -327,13 +319,6 @@ func main() {
 			return
 		}
 
-		// Save token balances immediately after distribution
-		if err := binomToken.SaveBalances(dataDir); err != nil {
-			log.Printf("Warning: Failed to save token balances after distribution: %v", err)
-		} else {
-			log.Printf("Token balances saved successfully after distribution")
-		}
-
 		// Log the distribution
 		auditService.LogEvent(
 			audit.InfoLevel,
@@ -367,73 +352,6 @@ func main() {
 				},
 			},
 		})
-	})
-
-	// Faucet endpoint to request initial tokens
-	router.POST("/faucet", func(c *gin.Context) {
-		var request struct {
-			Address  string  `json:"address"`
-			Amount   float64 `json:"amount"`
-			AdminKey string  `json:"adminKey"`
-		}
-
-		if err := c.ShouldBindJSON(&request); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		// Validate address
-		if request.Address[:4] != "AdNe" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid address format"})
-			return
-		}
-
-		// Get admin key from environment variable with fallback
-		adminKey := os.Getenv("BINOMENA_ADMIN_KEY")
-		if adminKey == "" {
-			adminKey = "binomena-founder-key-2025" // Fallback key if env var is not set
-		}
-
-		// Check if admin key is valid
-		if request.AdminKey != adminKey {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"status":  "error",
-				"message": "Unauthorized. Tokens are not available for free distribution.",
-			})
-			return
-		}
-
-		// Validate amount
-		if request.Amount <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Amount must be greater than 0"})
-			return
-		}
-
-		// Transfer tokens from treasury to the address
-		err := binomToken.Transfer("treasury", request.Address, request.Amount)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		// Save token balances immediately after faucet distribution
-		if err := binomToken.SaveBalances(dataDir); err != nil {
-			log.Printf("Warning: Failed to save token balances after faucet: %v", err)
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "success",
-			"message": fmt.Sprintf("Transferred %f BNM to %s", request.Amount, request.Address),
-			"balance": binomToken.GetBalance(request.Address),
-		})
-
-		// Log faucet request
-		auditService.LogEvent(
-			audit.InfoLevel,
-			"FaucetRequest",
-			fmt.Sprintf("Transferred %f BNM to %s", request.Amount, request.Address),
-			nil,
-		)
 	})
 
 	// Transaction endpoint
@@ -490,15 +408,6 @@ func main() {
 		// Broadcast transaction to the network
 		if err := p2pNode.BroadcastTransaction(*tx); err != nil {
 			log.Printf("Failed to broadcast transaction: %v", err)
-		}
-
-		// Save token balances and blockchain after transaction
-		if err := binomToken.SaveBalances(dataDir); err != nil {
-			log.Printf("Warning: Failed to save token balances after transaction: %v", err)
-		}
-
-		if err := blockchain.SaveChain(dataDir); err != nil {
-			log.Printf("Warning: Failed to save blockchain after transaction: %v", err)
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -656,15 +565,6 @@ func main() {
 			// Replace the blockchain safely
 			blockchain.ReplaceChain(newBlockchain.GetChain())
 
-			// Save the updated blockchain and token balances
-			if err := blockchain.SaveChain(dataDir); err != nil {
-				log.Printf("Warning: Failed to save blockchain after sync: %v", err)
-			}
-
-			if err := binomToken.SaveBalances(dataDir); err != nil {
-				log.Printf("Warning: Failed to save token balances after sync: %v", err)
-			}
-
 			c.JSON(http.StatusOK, gin.H{
 				"status":        "full chain replacement completed",
 				"blocksAdded":   peerBlockchain.Count - 1,
@@ -697,15 +597,6 @@ func main() {
 					// Burn fee
 					binomToken.Burn(fee)
 				}
-			}
-
-			// Save the updated blockchain and token balances
-			if err := blockchain.SaveChain(dataDir); err != nil {
-				log.Printf("Warning: Failed to save blockchain after sync: %v", err)
-			}
-
-			if err := binomToken.SaveBalances(dataDir); err != nil {
-				log.Printf("Warning: Failed to save token balances after sync: %v", err)
 			}
 
 			c.JSON(http.StatusOK, gin.H{
@@ -752,7 +643,6 @@ func main() {
 	fmt.Printf("Binomena blockchain node '%s' started\n", nodeName)
 	fmt.Printf("API server running on http://localhost:%d\n", *apiPort)
 	fmt.Printf("P2P node running on %s\n", p2pAddress)
-	fmt.Printf("Using validator address: %s\n", *founderAddress)
 
 	// Wait for interrupt signal to gracefully shutdown
 	quit := make(chan os.Signal, 1)
@@ -760,20 +650,6 @@ func main() {
 	<-quit
 
 	fmt.Println("Shutting down Binomena node...")
-
-	// Save token balances before shutdown
-	if err := binomToken.SaveBalances(dataDir); err != nil {
-		log.Printf("Warning: Failed to save token balances on shutdown: %v", err)
-	} else {
-		log.Printf("Token balances saved successfully on shutdown")
-	}
-
-	// Save blockchain before shutdown
-	if err := blockchain.SaveChain(dataDir); err != nil {
-		log.Printf("Warning: Failed to save blockchain on shutdown: %v", err)
-	} else {
-		log.Printf("Blockchain saved successfully on shutdown")
-	}
 
 	node.Stop()
 	p2pNode.Stop()

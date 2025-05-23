@@ -6,16 +6,36 @@ import (
 	"time"
 )
 
+// BlockchainInterface defines the interface for blockchain implementations
+type BlockchainInterface interface {
+	GetLastBlock() Block
+	AddBlock(block Block) error
+	GetBlockCount() int
+	GetChain() []Block
+	GetBlockByIndex(index uint64) (Block, error)
+	AddTransaction(tx Transaction) error
+	GetPendingTransactions() []Transaction
+	ReplaceChain(newChain []Block)
+}
+
+// TokenInterface defines the interface for token implementations
+type TokenInterface interface {
+	Transfer(from, to string, amount float64) error
+	GetBalance(address string) float64
+	GetCirculatingSupply() float64
+	Burn(amount float64)
+}
+
 // Node represents a node in the Binomena network
 type Node struct {
-	blockchain       *Blockchain
+	blockchain       BlockchainInterface
 	consensus        Consensus
-	token            Token
+	token            TokenInterface
 	peers            map[string]Peer
 	isRunning        bool
 	mu               sync.RWMutex
 	stopChan         chan struct{}
-	validatorAddress string // Add this field to the existing struct
+	validatorAddress string
 }
 
 // Consensus interface for consensus mechanisms
@@ -24,7 +44,7 @@ type Consensus interface {
 	SelectValidator(validators []string, stakes map[string]float64) string
 }
 
-// Token interface for token operations
+// Token interface for token operations (deprecated, use TokenInterface)
 type Token interface {
 	Transfer(from, to string, amount float64) error
 	GetBalance(address string) float64
@@ -39,7 +59,7 @@ type Peer struct {
 }
 
 // NewNode creates a new node
-func NewNode(blockchain *Blockchain, consensus Consensus, token Token, validatorAddress string) *Node {
+func NewNode(blockchain BlockchainInterface, consensus Consensus, token TokenInterface, validatorAddress string) *Node {
 	return &Node{
 		blockchain:       blockchain,
 		consensus:        consensus,

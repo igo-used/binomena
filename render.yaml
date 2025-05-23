@@ -2,17 +2,20 @@ services:
   - type: web
     name: binomena-node
     env: go
-    buildCommand: go build -o binomena
-    startCommand: ./start.sh
+    region: frankfurt
+    plan: starter
+    buildCommand: go mod download && go build -o app
+    startCommand: ./app
+    healthCheckPath: /health
     envVars:
+      - key: DATABASE_URL
+        value: postgresql://binomuser:EILWycLJTjfxQgFtUWpTGISbSycB3Ubn@dpg-d0n585mmcj7s7397fpsg-a/binomena_bqix
+      - key: DB_PASSWORD
+        value: EILWycLJTjfxQgFtUWpTGISbSycB3Ubn
       - key: PORT
         value: 10000
       - key: NODE_ID
         value: genesis-node
-      - key: DATA_DIR
-        value: /opt/render/project/src/data
-    disk:
-      name: blockchain-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1  
+      - key: DEBUG
+        value: false
     autoDeploy: true
