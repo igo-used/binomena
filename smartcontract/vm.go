@@ -382,10 +382,22 @@ func createSecureImportObject(store *wasmer.Store, level SecurityLevel) *wasmer.
 	)
 
 	// Register functions in the env namespace
-	importObject.Register("env", map[string]wasmer.IntoExtern{
+	imports := map[string]wasmer.IntoExtern{
 		"abort": abortFunc,
 		"trace": traceFunc,
-	})
+	}
+
+	// Try to create basic memory for modules that need it
+	// Start with 1 page (64KB) which is standard for AssemblyScript
+	memoryLimits, err := wasmer.NewLimits(1, 65536) // Min 1 page, max 65536 pages
+	if err == nil {
+		memoryType := wasmer.NewMemoryType(memoryLimits)
+		if memory := wasmer.NewMemory(store, memoryType); memory != nil {
+			imports["memory"] = memory
+		}
+	}
+
+	importObject.Register("env", imports)
 
 	return importObject
 }
