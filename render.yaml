@@ -9,7 +9,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        value: postgresql://binomuser:EILWycLJTjfxQgFtUWpTGISbSycB3Ubn@dpg-d0n585mmcj7s7397fpsg-a/binomena_bqix
+        value: postgresql://binomuser:EILWycLJTjfxQgFtUWpTGISbSycB3Ubn@dpg-d0n585mmcj7s7397fpsg-a/binomena_bq
       - key: DB_PASSWORD
         value: EILWycLJTjfxQgFtUWpTGISbSycB3Ubn
       - key: PORT

@@ -30,19 +30,64 @@ import (
 	"github.com/igo-used/binomena/audit"
 	"github.com/igo-used/binomena/consensus"
 	"github.com/igo-used/binomena/core"
+	"github.com/igo-used/binomena/database"
 	"github.com/igo-used/binomena/p2p"
 	"github.com/igo-used/binomena/smartcontract"
 	"github.com/igo-used/binomena/token"
 	"github.com/igo-used/binomena/wallet"
 )
 
+// Helper functions for audit service calls
+func logAuditEvent(auditService any, level audit.SecurityLevel, eventType, message string, data interface{}) {
+	if fileAudit, ok := auditService.(*audit.AuditService); ok {
+		fileAudit.LogEvent(level, eventType, message, data)
+	} else if dbAudit, ok := auditService.(*audit.AuditServiceDB); ok {
+		dbAudit.LogEvent(level, eventType, message, data)
+	}
+}
+
+func getAuditEvents(auditService any) []audit.AuditEvent {
+	if fileAudit, ok := auditService.(*audit.AuditService); ok {
+		return fileAudit.GetEvents()
+	} else if dbAudit, ok := auditService.(*audit.AuditServiceDB); ok {
+		return dbAudit.GetEvents()
+	}
+	return []audit.AuditEvent{}
+}
+
+func getAuditEventsByLevel(auditService any, level audit.SecurityLevel) []audit.AuditEvent {
+	if fileAudit, ok := auditService.(*audit.AuditService); ok {
+		return fileAudit.GetEventsByLevel(level)
+	} else if dbAudit, ok := auditService.(*audit.AuditServiceDB); ok {
+		return dbAudit.GetEventsByLevel(level)
+	}
+	return []audit.AuditEvent{}
+}
+
+func auditBlockchain(auditService any) {
+	if fileAudit, ok := auditService.(*audit.AuditService); ok {
+		fileAudit.AuditBlockchain()
+	} else if dbAudit, ok := auditService.(*audit.AuditServiceDB); ok {
+		dbAudit.AuditBlockchain()
+	}
+}
+
 func main() {
-	// Parse command line flags - remove hardcoded founder address
+	// Parse command line flags
 	apiPort := flag.Int("api-port", 8080, "API server port")
 	p2pPort := flag.Int("p2p-port", 9000, "P2P server port")
 	bootstrapNode := flag.String("bootstrap", "", "Bootstrap node address (optional)")
 	nodeID := flag.String("id", "", "Node identifier (optional)")
+	useDB := flag.Bool("use-db", true, "Use database backend (default: true)")
 	flag.Parse()
+
+	// Check for PORT environment variable (required for Render deployment)
+	if portEnv := os.Getenv("PORT"); portEnv != "" {
+		if port, err := strconv.Atoi(portEnv); err == nil {
+			*apiPort = port
+			log.Printf("Using PORT environment variable: %d", port)
+		}
+	}
 
 	// Set node identifier
 	nodeName := *nodeID
@@ -50,55 +95,198 @@ func main() {
 		nodeName = fmt.Sprintf("node-%d", *p2pPort)
 	}
 
-	// Initialize the blockchain with file backend for now (DB migration can be done later)
-	blockchain := core.NewBlockchain()
+	// Initialize database connection if using DB backend
+	var useDatabase bool
+	if *useDB {
+		if err := database.ConnectDatabase(); err != nil {
+			log.Printf("Failed to connect to database: %v", err)
+			log.Println("Falling back to file-based storage")
+			useDatabase = false
+		} else {
+			log.Println("Connected to database successfully")
+
+			// Run database migrations
+			if err := database.MigrateDatabase(); err != nil {
+				log.Printf("Failed to migrate database: %v", err)
+				log.Println("Falling back to file-based storage")
+				useDatabase = false
+			} else {
+				log.Println("Database migration completed")
+
+				// Initialize system state
+				if err := database.InitializeSystemState(); err != nil {
+					log.Printf("Failed to initialize system state: %v", err)
+				}
+
+				useDatabase = true
+			}
+		}
+	}
+
+	// Initialize blockchain based on backend choice
+	var blockchain core.BlockchainInterface
+	if useDatabase {
+		blockchain = core.NewBlockchainWithDB()
+		log.Println("Using database-backed blockchain")
+	} else {
+		blockchain = core.NewBlockchain()
+		log.Println("Using file-backed blockchain")
+	}
+
+	// Initialize token based on backend choice
+	var binomToken core.TokenInterface
+	if useDatabase {
+		binomToken = token.NewBinomTokenWithDB()
+		log.Println("Using database-backed token system")
+	} else {
+		binomToken = token.NewBinomToken()
+		log.Println("Using file-backed token system")
+	}
 
 	// Initialize the NodeSwift consensus mechanism
 	nodeSwift := consensus.NewNodeSwift()
 
-	// Initialize the Binom token with file backend for now
-	binomToken := token.NewBinomToken()
+	// Initialize smart contract system based on backend choice
+	var wasmVM *smartcontract.WasmVM
+	var contractStorage interface{}
+	var contractState interface{}
 
-	// Initialize the smart contract system
-	contractStorage, err := smartcontract.NewContractStorage("./contracts")
-	if err != nil {
-		log.Fatalf("Failed to initialize contract storage: %v", err)
+	if useDatabase {
+		dbContractStorage, err := smartcontract.NewContractStorageWithDB()
+		if err != nil {
+			log.Fatalf("Failed to initialize database contract storage: %v", err)
+		}
+		contractStorage = dbContractStorage
+
+		dbContractState, err := smartcontract.NewContractStateWithDB()
+		if err != nil {
+			log.Fatalf("Failed to initialize database contract state: %v", err)
+		}
+		contractState = dbContractState
+
+		// For database backend, we need to work with concrete types
+		if _, ok := binomToken.(*token.BinomTokenDB); ok {
+			if _, ok := blockchain.(*core.BlockchainDB); ok {
+				// Create a simple wrapper VM that can work with database types
+				// For now, we'll use file-based VM as the database VM doesn't exist
+				log.Println("Database VM not implemented yet, falling back to file VM for smart contracts")
+
+				// Create temporary file-based implementations for VM
+				tempToken := token.NewBinomToken()
+				tempBlockchain := core.NewBlockchain()
+
+				var err error
+				wasmVM, err = smartcontract.NewWasmVM(tempToken, tempBlockchain)
+				if err != nil {
+					log.Fatalf("Failed to initialize WASM VM: %v", err)
+				}
+			} else {
+				log.Fatalf("Expected database blockchain implementation")
+			}
+		} else {
+			log.Fatalf("Expected database token implementation")
+		}
+
+		log.Println("Using database-backed smart contract storage with file-based VM")
+	} else {
+		fileContractStorage, err := smartcontract.NewContractStorage("./contracts")
+		if err != nil {
+			log.Fatalf("Failed to initialize file contract storage: %v", err)
+		}
+		contractStorage = fileContractStorage
+
+		fileContractState, err := smartcontract.NewContractState("./contracts")
+		if err != nil {
+			log.Fatalf("Failed to initialize file contract state: %v", err)
+		}
+		contractState = fileContractState
+
+		// For file backend, use the original types
+		if fileToken, ok := binomToken.(*token.BinomToken); ok {
+			if fileBlockchain, ok := blockchain.(*core.Blockchain); ok {
+				wasmVM, err = smartcontract.NewWasmVM(fileToken, fileBlockchain)
+				if err != nil {
+					log.Fatalf("Failed to initialize WASM VM: %v", err)
+				}
+			} else {
+				log.Fatalf("Expected file blockchain implementation")
+			}
+		} else {
+			log.Fatalf("Expected file token implementation")
+		}
+
+		log.Println("Using file-backed smart contract system")
 	}
 
-	contractState, err := smartcontract.NewContractState("./contracts")
-	if err != nil {
-		log.Fatalf("Failed to initialize contract state: %v", err)
+	// Load existing contracts directly from storage
+	var contracts []*smartcontract.Contract
+	var err error
+	if fileStorage, ok := contractStorage.(*smartcontract.ContractStorage); ok {
+		contracts, err = fileStorage.LoadAllContracts()
+	} else if dbStorage, ok := contractStorage.(*smartcontract.ContractStorageDB); ok {
+		contracts, err = dbStorage.LoadAllContracts()
 	}
 
-	wasmVM, err := smartcontract.NewWasmVM(binomToken, blockchain)
-	if err != nil {
-		log.Fatalf("Failed to initialize WASM VM: %v", err)
-	}
-
-	// Load existing contracts
-	contracts, err := contractStorage.LoadAllContracts()
 	if err != nil {
 		log.Printf("Warning: Failed to load contracts: %v", err)
 	} else {
 		for _, contract := range contracts {
-			// Add contract to VM
 			wasmVM.AddContract(contract)
 		}
 		log.Printf("Loaded %d contracts", len(contracts))
 	}
 
-	// Create contract API
-	contractAPI := smartcontract.NewContractAPI(wasmVM, contractStorage, contractState, binomToken)
+	// Create contract API with concrete types
+	var contractAPI *smartcontract.ContractAPI
+	if fileStorage, ok := contractStorage.(*smartcontract.ContractStorage); ok {
+		if fileState, ok := contractState.(*smartcontract.ContractState); ok {
+			if fileToken, ok := binomToken.(*token.BinomToken); ok {
+				contractAPI = smartcontract.NewContractAPI(wasmVM, fileStorage, fileState, fileToken)
+			}
+		}
+	}
 
-	// Initialize the audit service
-	auditService := audit.NewAuditService(blockchain)
+	// For database storage, we'll need a different approach - for now use nil check
+	if contractAPI == nil {
+		log.Println("Warning: Contract API not fully initialized for database backend")
+		// Create a minimal working API for database backend
+		if fileToken, ok := binomToken.(*token.BinomToken); ok {
+			// Create temporary file storage for API
+			tempStorage, _ := smartcontract.NewContractStorage("./temp_contracts")
+			tempState, _ := smartcontract.NewContractState("./temp_contracts")
+			contractAPI = smartcontract.NewContractAPI(wasmVM, tempStorage, tempState, fileToken)
+		}
+	}
 
-	// Create a new node without hardcoded validator address
+	// Initialize audit service
+	var auditService any
+
+	if useDatabase {
+		auditService = audit.NewAuditServiceWithDB(blockchain)
+		log.Println("Using database-backed audit service")
+	} else {
+		if fileBlockchain, ok := blockchain.(*core.Blockchain); ok {
+			auditService = audit.NewAuditService(fileBlockchain)
+		} else {
+			log.Fatalf("Expected file blockchain implementation for audit service")
+		}
+		log.Println("Using file-backed audit service")
+	}
+
+	// Create node
 	node := core.NewNode(blockchain, nodeSwift, binomToken, "genesis")
 
 	// Start the P2P network
 	p2pAddress := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", *p2pPort)
-	p2pNode, err := p2p.NewP2PNode(blockchain, p2pAddress)
+	var p2pNode *p2p.P2PNode
+	if fileBlockchain, ok := blockchain.(*core.Blockchain); ok {
+		p2pNode, err = p2p.NewP2PNode(fileBlockchain, p2pAddress)
+	} else {
+		// For database blockchain, create a temporary file blockchain for P2P
+		tempBlockchain := core.NewBlockchain()
+		p2pNode, err = p2p.NewP2PNode(tempBlockchain, p2pAddress)
+		log.Println("Warning: Using temporary blockchain for P2P due to database backend")
+	}
 	if err != nil {
 		log.Fatalf("Failed to start P2P node: %v", err)
 	}
@@ -161,12 +349,7 @@ func main() {
 		})
 
 		// Log wallet creation
-		auditService.LogEvent(
-			audit.InfoLevel,
-			"WalletCreated",
-			fmt.Sprintf("New wallet created with address %s", newWallet.Address),
-			nil,
-		)
+		logAuditEvent(auditService, audit.InfoLevel, "WalletCreated", fmt.Sprintf("New wallet created with address %s", newWallet.Address), nil)
 	})
 
 	// Import wallet endpoint
@@ -197,12 +380,7 @@ func main() {
 		})
 
 		// Log wallet import
-		auditService.LogEvent(
-			audit.InfoLevel,
-			"WalletImported",
-			fmt.Sprintf("Wallet imported with address %s", importedWallet.Address),
-			nil,
-		)
+		logAuditEvent(auditService, audit.InfoLevel, "WalletImported", fmt.Sprintf("Wallet imported with address %s", importedWallet.Address), nil)
 	})
 
 	// Get wallet balance
@@ -261,12 +439,7 @@ func main() {
 		})
 
 		// Log faucet request
-		auditService.LogEvent(
-			audit.InfoLevel,
-			"FaucetRequest",
-			fmt.Sprintf("Transferred %f BNM to %s", request.Amount, request.Address),
-			nil,
-		)
+		logAuditEvent(auditService, audit.InfoLevel, "FaucetRequest", fmt.Sprintf("Transferred %f BNM to %s", request.Amount, request.Address), nil)
 	})
 
 	// NEW ENDPOINT: Distribute initial tokens to three wallets
@@ -320,17 +493,12 @@ func main() {
 		}
 
 		// Log the distribution
-		auditService.LogEvent(
-			audit.InfoLevel,
-			"InitialTokenDistribution",
-			fmt.Sprintf("Distributed tokens: %f to founder, %f to treasury, %f to community",
-				founderAmount, treasuryAmount, communityAmount),
-			map[string]interface{}{
-				"founder":   request.FounderAddress,
-				"treasury":  request.TreasuryAddress,
-				"community": request.CommunityAddress,
-			},
-		)
+		logAuditEvent(auditService, audit.InfoLevel, "InitialTokenDistribution", fmt.Sprintf("Distributed tokens: %f to founder, %f to treasury, %f to community",
+			founderAmount, treasuryAmount, communityAmount), map[string]interface{}{
+			"founder":   request.FounderAddress,
+			"treasury":  request.TreasuryAddress,
+			"community": request.CommunityAddress,
+		})
 
 		c.JSON(http.StatusOK, gin.H{
 			"status": "success",
@@ -417,12 +585,7 @@ func main() {
 		})
 
 		// Log transaction
-		auditService.LogEvent(
-			audit.InfoLevel,
-			"TransactionSubmitted",
-			fmt.Sprintf("Transaction %s submitted from %s to %s for %f BNM", tx.ID, tx.From, tx.To, tx.Amount),
-			tx,
-		)
+		logAuditEvent(auditService, audit.InfoLevel, "TransactionSubmitted", fmt.Sprintf("Transaction %s submitted from %s to %s for %f BNM", tx.ID, tx.From, tx.To, tx.Amount), tx)
 	})
 
 	// Get peers endpoint
@@ -611,16 +774,16 @@ func main() {
 	// Audit endpoints
 	router.GET("/audit", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"events": auditService.GetEvents(),
+			"events": getAuditEvents(auditService),
 		})
 	})
 
 	router.GET("/audit/security", func(c *gin.Context) {
 		// Perform a full blockchain audit
-		auditService.AuditBlockchain()
+		auditBlockchain(auditService)
 
 		// Get critical events
-		criticalEvents := auditService.GetEventsByLevel(audit.CriticalLevel)
+		criticalEvents := getAuditEventsByLevel(auditService, audit.CriticalLevel)
 
 		c.JSON(http.StatusOK, gin.H{
 			"status": "completed",
