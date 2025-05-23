@@ -432,9 +432,33 @@ func executeWasmFunction(instance *wasmer.Instance, function string, params []in
 
 // convertToWasmType converts a Go type to a WASM-compatible type
 func convertToWasmType(value interface{}) interface{} {
-	// Implement type conversion logic
-	// This is a simplified version; a real implementation would handle more types
-	return value
+	switch v := value.(type) {
+	case int:
+		return int32(v)
+	case int32:
+		return v
+	case int64:
+		return v
+	case float32:
+		return v
+	case float64:
+		return v
+	case bool:
+		if v {
+			return int32(1)
+		}
+		return int32(0)
+	case string:
+		// For strings, we would need to allocate memory in WASM
+		// For now, return 0 as a placeholder
+		return int32(0)
+	default:
+		// Try to convert to int32 as default
+		if i, ok := value.(int); ok {
+			return int32(i)
+		}
+		return int32(0)
+	}
 }
 
 // ExecutionContext represents the context for contract execution
