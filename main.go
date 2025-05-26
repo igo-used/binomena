@@ -891,6 +891,335 @@ func main() {
 		})
 	})
 
+	// PAPRD Stablecoin endpoints
+	// Read PAPRD ledger helper function
+	readPAPRDLedger := func() (map[string]interface{}, error) {
+		data, err := os.ReadFile("contracts/stablecoin/paprd-ledger.json")
+		if err != nil {
+			return nil, err
+		}
+		var ledger map[string]interface{}
+		err = json.Unmarshal(data, &ledger)
+		return ledger, err
+	}
+
+	// Write PAPRD ledger helper function
+	writePAPRDLedger := func(ledger map[string]interface{}) error {
+		data, err := json.MarshalIndent(ledger, "", "  ")
+		if err != nil {
+			return err
+		}
+		return os.WriteFile("contracts/stablecoin/paprd-ledger.json", data, 0644)
+	}
+
+	// Convert from 18 decimals
+	fromDecimals := func(amount string) string {
+		if amount == "" || amount == "0" {
+			return "0"
+		}
+		// Simple conversion for display - divide by 10^18
+		// For production, use big.Int for precision
+		val, _ := strconv.ParseFloat(amount, 64)
+		return fmt.Sprintf("%.0f", val/1e18)
+	}
+
+	// Convert to 18 decimals
+	toDecimals := func(amount string) string {
+		val, _ := strconv.ParseFloat(amount, 64)
+		return fmt.Sprintf("%.0f", val*1e18)
+	}
+
+	// 📊 GET /paprd/info - Token information
+	router.GET("/paprd/info", func(c *gin.Context) {
+		ledger, err := readPAPRDLedger()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read PAPRD ledger"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"name":        ledger["token_name"],
+			"symbol":      ledger["token_symbol"],
+			"decimals":    ledger["token_decimals"],
+			"totalSupply": fromDecimals(ledger["total_supply"].(string)),
+			"owner":       ledger["owner"],
+			"contract":    ledger["contract_id"],
+			"paused":      ledger["paused"],
+			"status":      "live",
+		})
+	})
+
+	// 💰 GET /paprd/balance/:address - Get PAPRD balance
+	router.GET("/paprd/balance/:address", func(c *gin.Context) {
+		address := c.Param("address")
+
+		ledger, err := readPAPRDLedger()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read PAPRD ledger"})
+			return
+		}
+
+		balances := ledger["balances"].(map[string]interface{})
+		balance := "0"
+		if bal, exists := balances[address]; exists {
+			balance = bal.(string)
+		}
+
+		readableBalance := fromDecimals(balance)
+
+		c.JSON(http.StatusOK, gin.H{
+			"address":    address,
+			"balance":    readableBalance,
+			"balanceWei": balance,
+			"symbol":     "PAPRD",
+		})
+	})
+
+	// 🔄 POST /paprd/transfer - Transfer PAPRD tokens
+	router.POST("/paprd/transfer", func(c *gin.Context) {
+		var request struct {
+			From       string `json:"from" binding:"required"`
+			To         string `json:"to" binding:"required"`
+			Amount     string `json:"amount" binding:"required"`
+			PrivateKey string `json:"privateKey"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		ledger, err := readPAPRDLedger()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read PAPRD ledger"})
+			return
+		}
+
+		// Check if contract is paused
+		if ledger["paused"].(bool) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Contract is paused"})
+			return
+		}
+
+		// Check blacklist
+		blacklisted := ledger["blacklisted"].([]interface{})
+		for _, addr := range blacklisted {
+			if addr.(string) == request.From || addr.(string) == request.To {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Address is blacklisted"})
+				return
+			}
+		}
+
+		amountWei := toDecimals(request.Amount)
+		balances := ledger["balances"].(map[string]interface{})
+
+		fromBalanceStr := "0"
+		if bal, exists := balances[request.From]; exists {
+			fromBalanceStr = bal.(string)
+		}
+
+		fromBalance, _ := strconv.ParseFloat(fromBalanceStr, 64)
+		amountFloat, _ := strconv.ParseFloat(amountWei, 64)
+
+		// Check balance
+		if fromBalance < amountFloat {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient balance"})
+			return
+		}
+
+		// Perform transfer
+		toBalanceStr := "0"
+		if bal, exists := balances[request.To]; exists {
+			toBalanceStr = bal.(string)
+		}
+		toBalance, _ := strconv.ParseFloat(toBalanceStr, 64)
+
+		balances[request.From] = fmt.Sprintf("%.0f", fromBalance-amountFloat)
+		balances[request.To] = fmt.Sprintf("%.0f", toBalance+amountFloat)
+
+		// Record transaction
+		transactions := ledger["transactions"].([]interface{})
+		tx := map[string]interface{}{
+			"id":        fmt.Sprintf("tx_%d", time.Now().UnixNano()),
+			"type":      "transfer",
+			"from":      request.From,
+			"to":        request.To,
+			"amount":    amountWei,
+			"timestamp": time.Now().Format(time.RFC3339),
+			"block":     time.Now().Unix(),
+			"status":    "confirmed",
+		}
+
+		transactions = append(transactions, tx)
+		ledger["transactions"] = transactions
+
+		if err := writePAPRDLedger(ledger); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save transaction"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"transaction": tx,
+			"newBalance":  fromDecimals(balances[request.From].(string)),
+		})
+
+		// Log the transfer
+		logAuditEvent(auditService, audit.InfoLevel, "PAPRDTransfer",
+			fmt.Sprintf("PAPRD transfer: %s PAPRD from %s to %s", request.Amount, request.From, request.To), tx)
+	})
+
+	// 🪙 POST /paprd/mint - Mint PAPRD tokens (owner only)
+	router.POST("/paprd/mint", func(c *gin.Context) {
+		var request struct {
+			To         string `json:"to" binding:"required"`
+			Amount     string `json:"amount" binding:"required"`
+			Caller     string `json:"caller" binding:"required"`
+			PrivateKey string `json:"privateKey"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		ledger, err := readPAPRDLedger()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read PAPRD ledger"})
+			return
+		}
+
+		// Check if caller is owner
+		if request.Caller != ledger["owner"].(string) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Only owner can mint tokens"})
+			return
+		}
+
+		amountWei := toDecimals(request.Amount)
+		balances := ledger["balances"].(map[string]interface{})
+
+		toBalanceStr := "0"
+		if bal, exists := balances[request.To]; exists {
+			toBalanceStr = bal.(string)
+		}
+		toBalance, _ := strconv.ParseFloat(toBalanceStr, 64)
+		amountFloat, _ := strconv.ParseFloat(amountWei, 64)
+
+		balances[request.To] = fmt.Sprintf("%.0f", toBalance+amountFloat)
+
+		// Update total supply
+		totalSupply, _ := strconv.ParseFloat(ledger["total_supply"].(string), 64)
+		ledger["total_supply"] = fmt.Sprintf("%.0f", totalSupply+amountFloat)
+
+		// Record transaction
+		transactions := ledger["transactions"].([]interface{})
+		tx := map[string]interface{}{
+			"id":        fmt.Sprintf("tx_%d", time.Now().UnixNano()),
+			"type":      "mint",
+			"from":      "0x0000000000000000000000000000000000000000",
+			"to":        request.To,
+			"amount":    amountWei,
+			"timestamp": time.Now().Format(time.RFC3339),
+			"block":     time.Now().Unix(),
+			"status":    "confirmed",
+		}
+
+		transactions = append(transactions, tx)
+		ledger["transactions"] = transactions
+
+		if err := writePAPRDLedger(ledger); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save mint transaction"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"transaction": tx,
+			"newBalance":  fromDecimals(balances[request.To].(string)),
+			"totalSupply": fromDecimals(ledger["total_supply"].(string)),
+		})
+
+		// Log the mint
+		logAuditEvent(auditService, audit.InfoLevel, "PAPRDMint",
+			fmt.Sprintf("PAPRD mint: %s PAPRD to %s by %s", request.Amount, request.To, request.Caller), tx)
+	})
+
+	// 📋 GET /paprd/transactions/:address - Get transaction history
+	router.GET("/paprd/transactions/:address", func(c *gin.Context) {
+		address := c.Param("address")
+
+		ledger, err := readPAPRDLedger()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read PAPRD ledger"})
+			return
+		}
+
+		transactions := ledger["transactions"].([]interface{})
+		var userTxs []interface{}
+
+		for _, txInterface := range transactions {
+			tx := txInterface.(map[string]interface{})
+			if tx["from"].(string) == address || tx["to"].(string) == address {
+				userTxs = append(userTxs, tx)
+			}
+		}
+
+		// Sort by timestamp (most recent first) and limit to 50
+		if len(userTxs) > 50 {
+			userTxs = userTxs[len(userTxs)-50:]
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"address":      address,
+			"transactions": userTxs,
+			"count":        len(userTxs),
+		})
+	})
+
+	// 👛 GET /paprd/wallet/:address - Get wallet info
+	router.GET("/paprd/wallet/:address", func(c *gin.Context) {
+		address := c.Param("address")
+
+		ledger, err := readPAPRDLedger()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read PAPRD ledger"})
+			return
+		}
+
+		balances := ledger["balances"].(map[string]interface{})
+		balance := "0"
+		if bal, exists := balances[address]; exists {
+			balance = bal.(string)
+		}
+
+		// Get BNM balance from main token system
+		bnmBalance := binomToken.GetBalance(address)
+
+		// Check if address is owner/minter
+		isOwner := address == ledger["owner"].(string)
+		isMinter := false
+		minters := ledger["minters"].([]interface{})
+		for _, minter := range minters {
+			if minter.(string) == address {
+				isMinter = true
+				break
+			}
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"address":      address,
+			"paprdBalance": fromDecimals(balance),
+			"bnmBalance":   bnmBalance,
+			"isOwner":      isOwner,
+			"isMinter":     isMinter,
+			"permissions": map[string]bool{
+				"transfer": true,
+				"mint":     isOwner || isMinter,
+				"burn":     isOwner,
+			},
+		})
+	})
+
 	// DPoS endpoints
 	router.POST("/delegates/register", func(c *gin.Context) {
 		var request struct {
