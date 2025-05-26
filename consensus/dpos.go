@@ -65,13 +65,30 @@ func NewDPoSConsensus(founderAddress, communityAddress string) *DPoSConsensus {
 		communityAddress: communityAddress,
 	}
 
-	// Migrate delegate tables
-	if err := database.DB.AutoMigrate(&Delegate{}, &Vote{}); err != nil {
-		log.Printf("Failed to migrate DPoS tables: %v", err)
-	}
+	// Only migrate tables if database is available
+	if database.DB != nil {
+		// Migrate delegate tables
+		if err := database.DB.AutoMigrate(&Delegate{}, &Vote{}); err != nil {
+			log.Printf("Failed to migrate DPoS tables: %v", err)
+		}
 
-	// Load existing delegates
-	dpos.loadDelegates()
+		// Load existing delegates
+		dpos.loadDelegates()
+	} else {
+		log.Println("Database not available, using in-memory DPoS consensus")
+		// Initialize with founder as the only delegate for file-based mode
+		founderDelegate := Delegate{
+			ID:            1,
+			Address:       founderAddress,
+			Stake:         400000000.0, // 400M BNM
+			VotesReceived: 400000000.0,
+			IsActive:      true,
+			RegisteredAt:  time.Now().Unix(),
+			Commission:    0.0, // No commission for founder
+		}
+		dpos.delegates = []Delegate{founderDelegate}
+		log.Printf("Initialized founder as delegate: %s with 400M BNM stake", founderAddress)
+	}
 
 	return dpos
 }
@@ -86,48 +103,77 @@ func (d *DPoSConsensus) RegisterDelegate(address string, stake float64) error {
 		return fmt.Errorf("minimum stake required: %.2f BNM", MinDelegateStake)
 	}
 
-	// Check if already registered
-	var existing Delegate
-	result := database.DB.Where("address = ?", address).First(&existing)
-	if result.Error != gorm.ErrRecordNotFound {
-		return fmt.Errorf("delegate already registered")
-	}
+	// If database is available, use database operations
+	if database.DB != nil {
+		// Check if already registered
+		var existing Delegate
+		result := database.DB.Where("address = ?", address).First(&existing)
+		if result.Error != gorm.ErrRecordNotFound {
+			return fmt.Errorf("delegate already registered")
+		}
 
-	// Check delegate limit
-	var count int64
-	database.DB.Model(&Delegate{}).Where("is_active = ?", true).Count(&count)
-	if count >= MaxDelegates {
-		return fmt.Errorf("maximum delegates reached (%d)", MaxDelegates)
-	}
+		// Check delegate limit
+		var count int64
+		database.DB.Model(&Delegate{}).Where("is_active = ?", true).Count(&count)
+		if count >= MaxDelegates {
+			return fmt.Errorf("maximum delegates reached (%d)", MaxDelegates)
+		}
 
-	// Create new delegate
-	delegate := Delegate{
-		Address:       address,
-		Stake:         stake,
-		VotesReceived: stake, // Self-vote
-		IsActive:      true,
-		RegisteredAt:  time.Now().Unix(),
-		Commission:    0.1, // 10% default commission
-	}
+		// Create new delegate
+		delegate := Delegate{
+			Address:       address,
+			Stake:         stake,
+			VotesReceived: stake, // Self-vote
+			IsActive:      true,
+			RegisteredAt:  time.Now().Unix(),
+			Commission:    0.1, // 10% default commission
+		}
 
-	if err := database.DB.Create(&delegate).Error; err != nil {
-		return fmt.Errorf("failed to register delegate: %v", err)
-	}
+		if err := database.DB.Create(&delegate).Error; err != nil {
+			return fmt.Errorf("failed to register delegate: %v", err)
+		}
 
-	// Add self-vote
-	vote := Vote{
-		VoterAddress: address,
-		DelegateID:   delegate.ID,
-		Amount:       stake,
-		Timestamp:    time.Now().Unix(),
-	}
+		// Add self-vote
+		vote := Vote{
+			VoterAddress: address,
+			DelegateID:   delegate.ID,
+			Amount:       stake,
+			Timestamp:    time.Now().Unix(),
+		}
 
-	if err := database.DB.Create(&vote).Error; err != nil {
-		log.Printf("Failed to create self-vote: %v", err)
-	}
+		if err := database.DB.Create(&vote).Error; err != nil {
+			log.Printf("Failed to create self-vote: %v", err)
+		}
 
-	// Reload delegates
-	d.loadDelegates()
+		// Reload delegates
+		d.loadDelegates()
+	} else {
+		// File-based mode: use in-memory operations
+		// Check if already registered
+		for _, delegate := range d.delegates {
+			if delegate.Address == address {
+				return fmt.Errorf("delegate already registered")
+			}
+		}
+
+		// Check delegate limit
+		if len(d.delegates) >= MaxDelegates {
+			return fmt.Errorf("maximum delegates reached (%d)", MaxDelegates)
+		}
+
+		// Create new delegate
+		newDelegate := Delegate{
+			ID:            uint(len(d.delegates) + 1),
+			Address:       address,
+			Stake:         stake,
+			VotesReceived: stake, // Self-vote
+			IsActive:      true,
+			RegisteredAt:  time.Now().Unix(),
+			Commission:    0.1, // 10% default commission
+		}
+
+		d.delegates = append(d.delegates, newDelegate)
+	}
 
 	log.Printf("Delegate registered: %s with stake %.2f BNM", address, stake)
 	return nil
@@ -268,16 +314,21 @@ func (d *DPoSConsensus) GetDelegates() []Delegate {
 
 // loadDelegates loads delegates from database and sorts by votes
 func (d *DPoSConsensus) loadDelegates() {
-	var delegates []Delegate
-	database.DB.Where("is_active = ?", true).Order("votes_received DESC").Find(&delegates)
+	if database.DB != nil {
+		var delegates []Delegate
+		database.DB.Where("is_active = ?", true).Order("votes_received DESC").Find(&delegates)
 
-	// Limit to max delegates
-	if len(delegates) > MaxDelegates {
-		delegates = delegates[:MaxDelegates]
+		// Limit to max delegates
+		if len(delegates) > MaxDelegates {
+			delegates = delegates[:MaxDelegates]
+		}
+
+		d.delegates = delegates
+		log.Printf("Loaded %d active delegates", len(delegates))
+	} else {
+		// File-based mode: delegates are already in memory
+		log.Printf("Using in-memory delegates: %d active", len(d.delegates))
 	}
-
-	d.delegates = delegates
-	log.Printf("Loaded %d active delegates", len(delegates))
 }
 
 // transferReward transfers reward tokens
@@ -292,14 +343,25 @@ func (d *DPoSConsensus) transferReward(address string, amount float64, tokenSyst
 
 // updateDelegateRewards updates delegate reward statistics
 func (d *DPoSConsensus) updateDelegateRewards(delegateID uint, reward float64) {
-	var delegate Delegate
-	if err := database.DB.First(&delegate, delegateID).Error; err != nil {
-		return
-	}
+	if database.DB != nil {
+		var delegate Delegate
+		if err := database.DB.First(&delegate, delegateID).Error; err != nil {
+			return
+		}
 
-	delegate.TotalRewards += reward
-	delegate.BlocksProduced++
-	database.DB.Save(&delegate)
+		delegate.TotalRewards += reward
+		delegate.BlocksProduced++
+		database.DB.Save(&delegate)
+	} else {
+		// File-based mode: update in-memory delegate
+		for i := range d.delegates {
+			if d.delegates[i].ID == delegateID {
+				d.delegates[i].TotalRewards += reward
+				d.delegates[i].BlocksProduced++
+				break
+			}
+		}
+	}
 }
 
 // ValidateBlock validates a block (satisfies core.Consensus interface)
