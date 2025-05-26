@@ -9,14 +9,17 @@ pub struct PaperDollar;
 impl PaperDollar {
     /// Initialize the contract
     pub fn new() -> Self {
-        if !Storage::contains_key(StorageKeys::OWNER) {
-            Storage::set_string(StorageKeys::OWNER, &Context::caller());
+        // Set the caller as the owner if no owner exists
+        if !Storage::exists(StorageKeys::OWNER) {
+            let caller = Context::caller();
+            Storage::set_string(StorageKeys::OWNER, &caller);
             Storage::set_u64(StorageKeys::TOTAL_SUPPLY, 0);
             Storage::set_bool(StorageKeys::PAUSED, false);
-            Storage::set_u64(StorageKeys::COLLATERAL_RATIO, 150); // 150% collateralization ratio
+            Storage::set_u64(StorageKeys::COLLATERAL_RATIO, 150); // Default 150%
             Storage::set_u64(StorageKeys::FIAT_RESERVE, 0);
         }
-        Self
+        
+        PaperDollar
     }
 
     // Modifier functions for access control

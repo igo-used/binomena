@@ -1,83 +1,72 @@
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Mutex, LazyLock};
 use serde::{Serialize, Deserialize};
 use borsh::{BorshSerialize, BorshDeserialize};
 
-// Storage abstraction for the contract
-// In a real blockchain implementation, this would interface with the blockchain's storage layer
-static STORAGE: Mutex<HashMap<String, Vec<u8>>> = Mutex::new(HashMap::new());
+// Use LazyLock for static initialization
+static STORAGE: LazyLock<Mutex<HashMap<String, Vec<u8>>>> = LazyLock::new(|| {
+    Mutex::new(HashMap::new())
+});
 
 pub struct Storage;
 
 impl Storage {
-    /// Get a value from storage with a default if not found
-    pub fn get<T>(key: &str, default_value: T) -> T 
+    /// Get a value from storage
+    pub fn get<T>(key: &str) -> Option<T> 
     where 
-        T: BorshDeserialize + Clone
+        T: BorshDeserialize,
     {
         let storage = STORAGE.lock().unwrap();
-        
-        if let Some(data) = storage.get(key) {
-            match T::try_from_slice(data) {
-                Ok(value) => value,
-                Err(_) => default_value,
-            }
+        if let Some(bytes) = storage.get(key) {
+            T::try_from_slice(bytes).ok()
         } else {
-            default_value
+            None
         }
     }
 
     /// Set a value in storage
     pub fn set<T>(key: &str, value: T) 
     where 
-        T: BorshSerialize
+        T: BorshSerialize,
     {
         let mut storage = STORAGE.lock().unwrap();
-        
-        if let Ok(serialized) = value.try_to_vec() {
+        if let Ok(serialized) = borsh::to_vec(&value) {
             storage.insert(key.to_string(), serialized);
         }
     }
 
     /// Get a string from storage with default
     pub fn get_string(key: &str, default_value: &str) -> String {
-        let storage = STORAGE.lock().unwrap();
-        
-        if let Some(data) = storage.get(key) {
-            String::from_utf8(data.clone()).unwrap_or_else(|_| default_value.to_string())
-        } else {
-            default_value.to_string()
-        }
+        Self::get(key).unwrap_or_else(|| default_value.to_string())
     }
 
     /// Set a string in storage
     pub fn set_string(key: &str, value: &str) {
-        let mut storage = STORAGE.lock().unwrap();
-        storage.insert(key.to_string(), value.as_bytes().to_vec());
+        Self::set(key, value.to_string());
     }
 
     /// Get a u64 from storage with default
     pub fn get_u64(key: &str, default_value: u64) -> u64 {
-        Self::get(key, default_value)
+        Self::get(key).unwrap_or(default_value)
     }
 
     /// Set a u64 in storage
     pub fn set_u64(key: &str, value: u64) {
-        Self::set(key, value)
+        Self::set(key, value);
     }
 
     /// Get a boolean from storage with default
     pub fn get_bool(key: &str, default_value: bool) -> bool {
-        Self::get(key, default_value)
+        Self::get(key).unwrap_or(default_value)
     }
 
     /// Set a boolean in storage
     pub fn set_bool(key: &str, value: bool) {
-        Self::set(key, value)
+        Self::set(key, value);
     }
 
     /// Check if a key exists in storage
-    pub fn contains_key(key: &str) -> bool {
+    pub fn exists(key: &str) -> bool {
         let storage = STORAGE.lock().unwrap();
         storage.contains_key(key)
     }
@@ -88,7 +77,7 @@ impl Storage {
         storage.remove(key);
     }
 
-    /// Clear all storage (useful for testing)
+    /// Clear all storage (testing only)
     #[cfg(test)]
     pub fn clear() {
         let mut storage = STORAGE.lock().unwrap();
@@ -137,11 +126,11 @@ mod tests {
         assert_eq!(Storage::get_bool("nonexistent", false), false);
 
         // Test contains_key
-        assert!(Storage::contains_key("test_u64"));
-        assert!(!Storage::contains_key("nonexistent"));
+        assert!(Storage::exists("test_u64"));
+        assert!(!Storage::exists("nonexistent"));
 
         // Test remove
         Storage::remove("test_u64");
-        assert!(!Storage::contains_key("test_u64"));
+        assert!(!Storage::exists("test_u64"));
     }
 } 

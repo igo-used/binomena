@@ -13,6 +13,7 @@ pub use events::*;
 pub use errors::*;
 
 // Enable logging in wasm
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -21,7 +22,16 @@ extern "C" {
 
 #[macro_export]
 macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+    ($($t:tt)*) => {
+        #[cfg(target_arch = "wasm32")]
+        {
+            web_sys::console::log_1(&format_args!($($t)*).to_string().into());
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            println!("{}", format_args!($($t)*))
+        }
+    }
 }
 
 // Export the contract interface
@@ -37,6 +47,29 @@ impl ContractInstance {
         ContractInstance {
             contract: PaperDollar::new(),
         }
+    }
+
+    /// Initialize contract with founder address as owner
+    #[wasm_bindgen]
+    pub fn new_with_founder() -> ContractInstance {
+        // Set the founder as the caller
+        Context::set_caller("AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534".to_string());
+        
+        ContractInstance {
+            contract: PaperDollar::new(),
+        }
+    }
+
+    /// Get the current owner of the contract
+    #[wasm_bindgen]
+    pub fn get_owner(&self) -> String {
+        self.contract.get_owner()
+    }
+
+    /// Check if the contract is paused
+    #[wasm_bindgen]
+    pub fn is_paused(&self) -> bool {
+        self.contract.is_paused()
     }
 
     // View functions

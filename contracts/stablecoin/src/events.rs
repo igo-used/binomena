@@ -1,7 +1,8 @@
 use serde::{Serialize, Deserialize};
 use borsh::{BorshSerialize, BorshDeserialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+#[borsh(use_discriminant = true)]
 pub enum CollateralType {
     Fiat = 0,
     Binom = 1,
