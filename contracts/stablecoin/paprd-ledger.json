@@ -1,0 +1,45 @@
+{
+  "contract_id": "AdNec919d52b5eedb9662999ec97cae93677440cb0cea9e11aed5cee637ee7f0",
+  "token_name": "Paper Dollar Stablecoin",
+  "token_symbol": "PAPRD",
+  "token_decimals": 18,
+  "total_supply": "100000000000000000000000000",
+  "owner": "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534",
+  "balances": {
+    "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534": "100000000000000000000000000"
+  },
+  "minters": [
+    "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534"
+  ],
+  "blacklisted": [],
+  "paused": false,
+  "collateral_ratio": 100,
+  "collateral_balances": {
+    "BNM": "100000000000000000000000000",
+    "FIAT": "0"
+  },
+  "transactions": [
+    {
+      "id": "tx_001",
+      "type": "mint",
+      "from": "0x0000000000000000000000000000000000000000",
+      "to": "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534",
+      "amount": "100000000000000000000000000",
+      "collateral_type": "BNM",
+      "timestamp": "2025-05-26T11:15:00Z",
+      "block": 4,
+      "status": "confirmed"
+    }
+  ],
+  "exchange_rate": {
+    "PAPRD_to_USD": 1.00,
+    "last_updated": "2025-05-26T11:15:00Z"
+  },
+  "founder_info": {
+    "address": "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534",
+    "role": "founder",
+    "permissions": ["mint", "burn", "pause", "blacklist", "transfer_ownership"],
+    "iban": "PLACEHOLDER_FOR_REAL_IBAN",
+    "bank_name": "PLACEHOLDER_FOR_REAL_BANK"
+  }
+} 

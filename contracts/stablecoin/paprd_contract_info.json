@@ -1,0 +1,10 @@
+{
+  "contractId": "AdNe1e77857b790cf352e57a20c704add7ce86db6f7dc5b7d14cbea95cfffe0d
+AdNe1e77857b790cf352e57a20c704add7ce86db6f7dc5b7d14cbea95cfffe0d",
+  "owner": "AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534",
+  "name": "Paper Dollar Stablecoin (PAPRD)",
+  "symbol": "PAPRD",
+  "decimals": 18,
+  "deployedAt": "2025-05-26T10:32:22Z",
+  "blockchainAPI": "http://localhost:8080"
+}

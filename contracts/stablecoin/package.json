@@ -1,0 +1,30 @@
+{
+  "name": "paprd-stablecoin-api",
+  "version": "1.0.0",
+  "description": "API server for PAPRD stablecoin on Binomena blockchain",
+  "main": "paprd-api-server.js",
+  "scripts": {
+    "start": "node paprd-api-server.js",
+    "dev": "nodemon paprd-api-server.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "stablecoin",
+    "paprd",
+    "binomena",
+    "blockchain",
+    "cryptocurrency"
+  ],
+  "author": "Binomena Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+} 
