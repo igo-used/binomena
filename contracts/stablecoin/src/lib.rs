@@ -72,6 +72,24 @@ impl ContractInstance {
         self.contract.is_paused()
     }
 
+    /// Get token name
+    #[wasm_bindgen]
+    pub fn get_name(&self) -> String {
+        self.contract.get_name()
+    }
+
+    /// Get token symbol
+    #[wasm_bindgen]
+    pub fn get_symbol(&self) -> String {
+        self.contract.get_symbol()
+    }
+
+    /// Get token decimals
+    #[wasm_bindgen]
+    pub fn get_decimals(&self) -> u8 {
+        self.contract.get_decimals()
+    }
+
     // View functions
     #[wasm_bindgen]
     pub fn get_balance(&self, address: &str) -> u64 {

@@ -6,6 +6,13 @@ use crate::{require, safe_add, safe_sub, safe_mul};
 
 pub struct PaperDollar;
 
+// Token constants
+impl PaperDollar {
+    pub const TOKEN_NAME: &'static str = "Paper Dollar";
+    pub const TOKEN_SYMBOL: &'static str = "PAPRD";
+    pub const TOKEN_DECIMALS: u8 = 18;
+}
+
 impl PaperDollar {
     /// Initialize the contract
     pub fn new() -> Self {
@@ -93,6 +100,21 @@ impl PaperDollar {
 
     pub fn is_paused(&self) -> bool {
         Storage::get_bool(StorageKeys::PAUSED, false)
+    }
+
+    /// Get token name
+    pub fn get_name(&self) -> String {
+        Self::TOKEN_NAME.to_string()
+    }
+
+    /// Get token symbol
+    pub fn get_symbol(&self) -> String {
+        Self::TOKEN_SYMBOL.to_string()
+    }
+
+    /// Get token decimals
+    pub fn get_decimals(&self) -> u8 {
+        Self::TOKEN_DECIMALS
     }
 
     // Mutating functions
@@ -337,6 +359,11 @@ mod tests {
         assert_eq!(contract.get_total_supply(), 0);
         assert_eq!(contract.get_collateral_ratio(), 150);
         assert!(!contract.is_paused());
+        
+        // Test token metadata
+        assert_eq!(contract.get_name(), "Paper Dollar");
+        assert_eq!(contract.get_symbol(), "PAPRD");
+        assert_eq!(contract.get_decimals(), 18);
     }
 
     #[test]
