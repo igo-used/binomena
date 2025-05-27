@@ -75,13 +75,17 @@ func NewSuperNomGateway(port string) *SuperNomGateway {
 
 // setupRoutes configures all API endpoints
 func (g *SuperNomGateway) setupRoutes() {
+	// Serve static files and client demo
+	g.ServerMux.PathPrefix("/client/").Handler(http.StripPrefix("/client/", http.FileServer(http.Dir("client/"))))
+	g.ServerMux.PathPrefix("/public/").Handler(http.StripPrefix("/public/", http.FileServer(http.Dir("public/"))))
+
 	// Serve marketing landing page at root
 	g.ServerMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			http.ServeFile(w, r, "public/index.html")
 			return
 		}
-		// For other paths, return 404
+		// For other unhandled paths, return 404
 		http.NotFound(w, r)
 	}).Methods("GET")
 
