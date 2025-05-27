@@ -1,262 +1,285 @@
-# 🚀 SuperNom - Decentralized VPN on Binomena Blockchain
+# 🚀 SuperNom - Revolutionary Blockchain VPN
 
-**SuperNom** is a revolutionary decentralized VPN system that uses the Binomena blockchain as the access control layer, replacing traditional SIM card trust models with blockchain-based authentication. This is the future of internet access - where your wallet becomes your identity and tokens become your access pass.
+**World's First Blockchain-Based VPN Service - Mobile Network Operators (MNO) Killer**
 
-## 🌟 Features
+SuperNom replaces traditional ISPs and mobile carriers with blockchain-powered internet access. Pay with BNM tokens instead of monthly subscriptions, access global internet without restrictions, and own your digital privacy.
 
-### **Core Functionality**
-- 🔐 **Blockchain Authentication**: Pay with BNM tokens to access VPN services
-- 🏆 **Reputation System**: Build trust through successful sessions and token staking
-- 🗳️ **Democratic Governance**: Delegate voting for blacklisting, whitelisting, and system changes
-- ⚡ **Smart Contracts**: Automated session management and payment processing
-- 🌍 **Geographic Coverage**: Multiple VPN nodes across different zones
-- 📊 **Tiered Access**: Basic, Standard, and Premium access levels
-
-### **Security Features**
-- 🛡️ **Anti-Abuse System**: Reputation-based access control and rate limiting
-- 🚨 **Emergency Controls**: Delegate-triggered emergency shutdown capabilities
-- 🔒 **Stake Requirements**: New users must stake tokens for access
-- 📝 **Audit Trail**: All transactions and access logged on blockchain
-- 🚫 **Blacklist Management**: Community-governed ban system with appeals
-
-### **Technical Architecture**
-- 🔗 **Binomena Integration**: Seamless integration with existing DPoS blockchain
-- 🌐 **WireGuard VPN**: Modern, secure VPN protocol
-- 🎯 **RESTful API**: Easy integration for developers and applications
-- 📱 **Web Client**: Beautiful web interface for managing VPN access
-- 🔄 **Real-time Sync**: Continuous synchronization with blockchain state
-
-## 🏗️ Architecture Overview
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Client    │───▶│  SuperNom API   │───▶│ Smart Contracts │
-│   (HTML/JS)     │    │   (Gateway)     │    │  (VPN + Gov)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │                        │
-                                ▼                        ▼
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │ VPN Infrastructure│    │ Binomena Chain │
-                       │   (WireGuard)   │    │   (DPoS + WASM) │
-                       └─────────────────┘    └─────────────────┘
-```
-
-## 🚦 Quick Start
-
-### **Prerequisites**
-- Go 1.19+
-- Access to Binomena blockchain node
-- WireGuard installed (for VPN usage)
-
-### **Installation**
-
-1. **Clone and Setup**
-```bash
-cd binomena/supernom
-go mod download
-```
-
-2. **Configure Environment**
-```bash
-export SUPERNOM_PORT=8080
-export BINOMENA_NODE_URL=https://binomena-node.onrender.com
-```
-
-3. **Start SuperNom**
-```bash
-go run main.go
-```
-
-4. **Access Web Interface**
-```
-http://localhost:8080/health
-http://localhost:8080/status
-```
-
-## 📋 API Endpoints
-
-### **Authentication & Access**
-```
-GET  /auth/check?wallet=AdNe...        - Check VPN authorization
-POST /auth/purchase                    - Purchase VPN access
-GET  /auth/config?wallet=AdNe...       - Get WireGuard config
-POST /auth/revoke                      - Revoke VPN session
-GET  /auth/status?wallet=AdNe...       - Get session status
-```
-
-### **User Management**
-```
-GET  /user/reputation?address=AdNe...  - Get user reputation
-GET  /user/sessions?wallet=AdNe...     - Get session history
-POST /user/stake                       - Stake tokens for reputation
-```
-
-### **Governance**
-```
-GET  /governance/proposals             - List governance proposals
-POST /governance/proposal              - Create new proposal
-POST /governance/vote                  - Vote on proposal
-POST /governance/emergency             - Trigger emergency shutdown
-```
-
-### **System Status**
-```
-GET  /status                           - System status and stats
-GET  /stats                            - Detailed system metrics
-GET  /health                           - Health check
-```
-
-## 💰 Token Economics
-
-### **Access Pricing (BNM)**
-- **Basic (1 hour)**: 10 BNM - 5GB bandwidth
-- **Standard (6 hours)**: 50 BNM - 15GB bandwidth  
-- **Premium (24 hours)**: 150 BNM - 50GB bandwidth
-
-### **Reputation System**
-- **New Users**: Start with 100 trust score, require 100 BNM stake
-- **Verified Users**: 400+ trust score, standard access
-- **Trusted Users**: 800+ trust score, premium benefits
-- **Violations**: -50 trust score penalty per violation
-
-### **Governance Voting Thresholds**
-- **Blacklist**: 60% delegate majority
-- **Whitelist**: 51% delegate majority
-- **Settings**: 67% delegate majority
-- **Emergency**: 75% delegate majority
-
-## 🔧 Smart Contract Architecture
-
-### **VPN Access Contract**
-```go
-type VPNAccessContract struct {
-    Sessions       map[string]*VPNSession
-    Reputation     map[string]*UserReputation
-    GlobalSettings *GlobalVPNSettings
-    Blacklist      map[string]*BlacklistEntry
-}
-```
-
-**Key Functions:**
-- `PurchaseAccess()` - Handle VPN payments and create sessions
-- `CheckAuthorization()` - Verify active VPN access
-- `UpdateBandwidthUsage()` - Track and limit bandwidth
-- `CompleteSession()` - Update reputation on successful completion
-
-### **Governance Contract**
-```go
-type GovernanceContract struct {
-    Proposals           map[string]*Proposal
-    AuthorizedDelegates map[string]*Delegate
-    EmergencySettings   *EmergencySettings
-}
-```
-
-**Key Functions:**
-- `CreateProposal()` - Submit governance proposals
-- `CastVote()` - Delegate voting on proposals
-- `ExecuteProposal()` - Apply approved changes
-- `TriggerEmergency()` - Emergency system controls
-
-## 🌐 Usage Examples
-
-### **Purchase VPN Access**
-```javascript
-const response = await fetch('/auth/purchase', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        walletAddress: 'AdNe1234567890...',
-        tokenType: 'BNM',
-        amount: 10,
-        duration: 3600, // 1 hour
-        geographicZone: 'us-east',
-        paymentSignature: 'blockchain_tx_signature'
-    })
-});
-```
-
-### **Get VPN Configuration**
-```javascript
-const config = await fetch('/auth/config?wallet=AdNe1234567890...');
-// Returns WireGuard configuration for direct import
-```
-
-### **Check Authorization**
-```javascript
-const auth = await fetch('/auth/check?wallet=AdNe1234567890...');
-// Returns session details and authorization status
-```
-
-## 🔒 Security Considerations
-
-### **Anti-Abuse Measures**
-1. **Stake Requirements**: New users must stake 100 BNM minimum
-2. **Session Limits**: Maximum 5 sessions per day per address
-3. **Reputation Decay**: Inactive users lose trust score over time
-4. **Geographic Restrictions**: Configurable country/region blocking
-5. **Emergency Shutdown**: Delegate-controlled emergency stops
-
-### **Privacy Protection**
-- **No Deep Packet Inspection**: Traffic content never analyzed
-- **Minimal Data Storage**: Only session metadata stored
-- **Temporary Logs**: Connection logs deleted after 24-48 hours
-- **Address Anonymity**: No KYC required, only wallet address
-
-### **Compliance Framework**
-- **Terms of Service**: Blockchain-signed user agreements
-- **Prohibited Activities**: Clear usage guidelines
-- **Law Enforcement**: Cooperation when legally required
-- **Appeal Process**: Transparent ban appeals through governance
-
-## 🎯 Future Roadmap
-
-### **Phase 1: MVP (Current)**
-- ✅ Basic VPN access via blockchain payments
-- ✅ Smart contract governance
-- ✅ Web client interface
-- ✅ Reputation system
-
-### **Phase 2: Enhanced Infrastructure**
-- 🔲 Multiple VPN node deployment
-- 🔲 Real WireGuard key generation
-- 🔲 Mobile app development
-- 🔲 QR code configuration sharing
-
-### **Phase 3: 6G Integration**
-- 🔲 Satellite internet compatibility
-- 🔲 6G network integration
-- 🔲 IoT device support
-- 🔲 Global mesh networking
-
-### **Phase 4: Ecosystem Expansion**
-- 🔲 Delegate VPN node operators
-- 🔲 Revenue sharing for node operators
-- 🔲 Cross-chain compatibility
-- 🔲 Enterprise features
-
-## 🤝 Contributing
-
-SuperNom is part of the Binomena ecosystem. To contribute:
-
-1. **Report Issues**: Use GitHub issues for bugs and feature requests
-2. **Code Contributions**: Submit pull requests with tests
-3. **Governance**: Participate in delegate voting for system changes
-4. **Documentation**: Help improve user guides and API docs
-
-## 📜 License
-
-SuperNom is open source software licensed under MIT License.
-
-## 🆘 Support
-
-- **Documentation**: See `/docs` directory
-- **API Reference**: Available at `/api/docs` when running
-- **Community**: Join Binomena Discord/Telegram
-- **Issues**: Report bugs on GitHub
+**Founded by Juxhino Kapllanaj (uJ1N0)** - Creator of Binomena Blockchain and pioneer of decentralized telecommunications.
 
 ---
 
-**SuperNom**: *Revolutionizing internet access through blockchain technology* 🚀
+## 🌟 Revolutionary Features
 
-*Built with ❤️ on the Binomena blockchain* 
+### 📡 **Replace Your SIM Card with Your Wallet**
+- **No SIM cards needed** - Your blockchain wallet IS your identity
+- **Pay-per-use access** - No monthly subscriptions or contracts
+- **Global roaming** - Works everywhere without carrier restrictions
+- **Complete privacy** - No personal data collection or tracking
+- **Instant activation** - Buy BNM tokens, get internet immediately
+
+### 🔐 **Privacy-First Technology**
+- **Zero-logs architecture** - No browsing history stored
+- **End-to-end encryption** - WireGuard protocol for maximum security
+- **Blockchain verification** - All payments transparent and immutable
+- **Censorship resistant** - Access the open internet globally
+- **Democratic governance** - Community-controlled network
+
+### 💰 **Token Economics**
+- **Basic**: 10 BNM per hour (5GB bandwidth)
+- **Standard**: 50 BNM per 6 hours (15GB bandwidth)  
+- **Premium**: 150 BNM per 24 hours (50GB bandwidth)
+- **Staking rewards** - Lock BNM tokens for better rates
+- **Token appreciation** - Value increases with network growth
+
+---
+
+## 🏗️ Architecture
+
+SuperNom consists of three main components that work together to create the world's first blockchain ISP:
+
+### 🔗 **Smart Contracts** (`contracts/`)
+- **VPNAccessContract** - Manages VPN purchases and sessions
+- **GovernanceContract** - Democratic voting and proposals
+- **ReputationContract** - User trust scores and staking
+
+### 🌐 **API Gateway** (`api/`)
+- RESTful API for all VPN operations
+- CORS-enabled for web interface integration
+- Real-time session management
+- Payment processing and verification
+
+### 💻 **Web Interface** (`client/` & `public/`)
+- Professional marketing website
+- Interactive VPN demo interface
+- Live blockchain integration
+- User-friendly token purchasing
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Web Client    │    │   API Gateway   │    │ Smart Contracts │
+│  (React/HTML)   │◄──►│   (Go/Gin)      │◄──►│  (Rust/WASM)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  User Payments  │    │ VPN Servers     │    │ Binomena Chain │
+│   (BNM Tokens)  │◄──►│  (WireGuard)    │◄──►│  (Blockchain)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Go 1.18+ (for API server)
+- Rust 1.70+ (for smart contracts)
+- BNM tokens (for VPN access)
+
+### Installation
+
+```bash
+# Clone SuperNom
+git clone https://github.com/igo-used/binomena.git
+cd binomena/supernom
+
+# Install dependencies
+go mod download
+
+# Build SuperNom
+go build -o supernom-vpn
+
+# Start the service
+./supernom-vpn
+```
+
+### Quick Test
+
+```bash
+# Check system status
+curl http://localhost:8080/health
+
+# Check VPN access for wallet
+curl "http://localhost:8080/auth/check?wallet=YOUR_WALLET_ADDRESS"
+
+# Purchase VPN access
+curl -X POST http://localhost:8080/auth/purchase \
+  -H "Content-Type: application/json" \
+  -d '{
+    "walletAddress": "YOUR_WALLET",
+    "tokenType": "BNM",
+    "amount": 10,
+    "duration": 3600,
+    "geographicZone": "global",
+    "paymentSignature": "demo_signature"
+  }'
+```
+
+---
+
+## 📋 API Endpoints
+
+### 🔐 Authentication
+- `GET /auth/check` - Verify VPN access for wallet
+- `POST /auth/purchase` - Buy VPN access with BNM tokens
+- `GET /auth/config` - Download WireGuard configuration
+- `POST /auth/revoke` - Terminate VPN session
+
+### 👤 User Management  
+- `GET /user/reputation` - Get user trust score
+- `GET /user/sessions` - View session history
+- `POST /user/stake` - Stake BNM tokens for better rates
+
+### 🗳️ Governance
+- `GET /governance/proposals` - View community proposals
+- `POST /governance/vote` - Vote on proposals (delegates only)
+- `POST /governance/emergency` - Trigger emergency actions
+
+### 📊 System Status
+- `GET /health` - Health check
+- `GET /status` - System operational status  
+- `GET /stats` - Detailed network statistics
+
+---
+
+## 💡 Use Cases
+
+### 🌍 **Global Digital Nomads**
+- Work from anywhere with instant internet access
+- No need for local SIM cards or contracts
+- Pay only for what you use
+
+### 🔒 **Privacy Advocates**
+- Complete anonymity with crypto payments
+- No personal data required
+- Censorship-resistant browsing
+
+### 🏢 **Remote Teams**
+- Secure connections for distributed workers
+- Enterprise-grade encryption
+- Scalable token purchasing
+
+### 🚀 **Crypto Enthusiasts**
+- Native blockchain integration
+- Token appreciation potential
+- Community governance participation
+
+---
+
+## 🛡️ Security & Privacy
+
+### 🔒 **Technical Security**
+- WireGuard VPN protocol (state-of-the-art)
+- ECDSA P-256 cryptographic signatures
+- Zero-logs architecture (nothing stored)
+- Perfect forward secrecy
+- End-to-end encryption
+
+### 📊 **Blockchain Security**
+- Smart contract-based access control
+- Immutable payment records
+- Democratic governance
+- Emergency pause mechanisms
+- Multi-signature controls
+
+### 🌐 **Operational Security**
+- RAM-only VPN servers
+- No user data retention
+- Jurisdiction-aware compliance
+- Regular security audits
+- Open source transparency
+
+---
+
+## 🌟 Future Roadmap
+
+### 📱 **Phase 1: VPN Service (Active)**
+- ✅ Blockchain VPN infrastructure
+- ✅ Smart contract integration
+- ✅ Web interface and API
+- 🔄 Beta testing and optimization
+
+### 🌐 **Phase 2: ISP Replacement (2025)**
+- 📋 Direct internet access without traditional ISPs
+- 📋 Mesh networking with token incentives
+- 📋 Mobile app for seamless usage
+- 📋 Enterprise partnerships
+
+### 🛰️ **Phase 3: Satellite Integration (2026)**
+- 📋 Starlink and satellite internet support
+- 📋 6G infrastructure tokenization
+- 📋 Global mesh network deployment
+- 📋 Complete MNO disruption
+
+### 🚀 **Phase 4: Telecommunications Revolution (2027+)**
+- 📋 Replace all traditional carriers
+- 📋 Global decentralized internet
+- 📋 Token-based economy standard
+- 📋 Complete digital sovereignty
+
+---
+
+## 🤝 Contributing
+
+SuperNom is open source and welcomes contributions from the community!
+
+### 🔧 **Development Areas**
+- Smart contract optimization
+- VPN server infrastructure  
+- Mobile app development
+- Security auditing
+- Documentation and tutorials
+
+### 📋 **Contribution Guidelines**
+1. **Code Quality** - Follow Go and Rust best practices
+2. **Security First** - All changes must maintain security standards
+3. **Privacy Focus** - Uphold zero-logs and anonymity principles
+4. **Testing** - Add comprehensive tests for new features
+5. **Documentation** - Update docs for all changes
+
+---
+
+## 📜 License
+
+This project is licensed under the **Apache License 2.0** - see the [LICENSE](LICENSE) file for details.
+
+### Copyright Notice
+```
+Copyright 2025 Juxhino Kapllanaj (uJ1N0)
+Licensed under the Apache License, Version 2.0
+```
+
+---
+
+## 📞 Contact & Community
+
+- **Founder**: Juxhino Kapllanaj (uJ1N0)
+- **Binomena Blockchain**: https://github.com/igo-used/binomena
+- **Email**: juxhino.kap@yahoo.com
+- **Community**: https://x.com/BinomChain
+
+---
+
+## 🎯 Why SuperNom Will Win
+
+### 💰 **Economic Advantage**
+- **Traditional ISP**: $50-100/month subscriptions
+- **SuperNom**: $1-10 pay-per-use with token appreciation
+
+### 🌍 **Global Accessibility**
+- **Traditional Roaming**: $5-20 per MB in foreign countries
+- **SuperNom**: Same low rates everywhere globally
+
+### 🔐 **Privacy Superiority**
+- **Traditional ISPs**: Track, log, and sell your data
+- **SuperNom**: Zero logs, complete anonymity, blockchain verified
+
+### 🚀 **Technology Leadership**
+- **First mover** in blockchain ISP space
+- **Proven technology** with live mainnet
+- **Community governed** vs corporate controlled
+- **Token economics** creating sustainable growth
+
+---
+
+*Built with ❤️ by Juxhino Kapllanaj (uJ1N0) - Disrupting telecommunications one block at a time* 
