@@ -312,6 +312,28 @@ func (d *DPoSConsensus) GetDelegates() []Delegate {
 	return result
 }
 
+// GetActiveDelegateCount returns the number of active delegates
+func (d *DPoSConsensus) GetActiveDelegateCount() int {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	if database.DB != nil {
+		// Database mode: count active delegates from database
+		var count int64
+		database.DB.Model(&Delegate{}).Where("is_active = ?", true).Count(&count)
+		return int(count)
+	} else {
+		// File-based mode: count active delegates from memory
+		activeCount := 0
+		for _, delegate := range d.delegates {
+			if delegate.IsActive {
+				activeCount++
+			}
+		}
+		return activeCount
+	}
+}
+
 // loadDelegates loads delegates from database and sorts by votes
 func (d *DPoSConsensus) loadDelegates() {
 	if database.DB != nil {

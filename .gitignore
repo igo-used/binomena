@@ -5,8 +5,11 @@ package-lock.json
 # macOS system files
 .DS_Store
 
-# Binaries
+# Binaries (SECURITY: Never commit compiled binaries)
 binomena
+app
+*.exe
+*.bin
 
 # Environment files (NEVER commit these!)
 .env
@@ -56,3 +59,18 @@ certificates/
 # OS generated files
 Thumbs.db
 ehthumbs.db
+
+# Security sensitive files
+config/secrets.json
+admin_keys.txt
+*.secret
+wallet_seeds.txt
+private_data/
+
+# Test data that might contain sensitive info
+test_wallets.json
+test_keys.txt
+
+# Audit logs (may contain sensitive data)
+audit_*.log
+security_*.log

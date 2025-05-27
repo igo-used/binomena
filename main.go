@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -69,6 +70,63 @@ func auditBlockchain(auditService any) {
 		fileAudit.AuditBlockchain()
 	} else if dbAudit, ok := auditService.(*audit.AuditServiceDB); ok {
 		dbAudit.AuditBlockchain()
+	}
+}
+
+// Rate limiting structure
+type RateLimiter struct {
+	requests map[string][]time.Time
+	mutex    sync.RWMutex
+	limit    int
+	window   time.Duration
+}
+
+func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
+	return &RateLimiter{
+		requests: make(map[string][]time.Time),
+		limit:    limit,
+		window:   window,
+	}
+}
+
+func (rl *RateLimiter) Allow(clientIP string) bool {
+	rl.mutex.Lock()
+	defer rl.mutex.Unlock()
+
+	now := time.Now()
+
+	// Clean old requests
+	if requests, exists := rl.requests[clientIP]; exists {
+		var validRequests []time.Time
+		for _, reqTime := range requests {
+			if now.Sub(reqTime) < rl.window {
+				validRequests = append(validRequests, reqTime)
+			}
+		}
+		rl.requests[clientIP] = validRequests
+	}
+
+	// Check if limit exceeded
+	if len(rl.requests[clientIP]) >= rl.limit {
+		return false
+	}
+
+	// Add current request
+	rl.requests[clientIP] = append(rl.requests[clientIP], now)
+	return true
+}
+
+// Rate limiting middleware
+func rateLimitMiddleware(limiter *RateLimiter) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !limiter.Allow(c.ClientIP()) {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error": "Rate limit exceeded. Please try again later.",
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
 	}
 }
 
@@ -365,6 +423,12 @@ func main() {
 		c.Next()
 	})
 
+	// Initialize rate limiters
+	generalLimiter := NewRateLimiter(100, time.Minute)    // 100 requests per minute for general endpoints
+	transactionLimiter := NewRateLimiter(10, time.Minute) // 10 transactions per minute
+	adminLimiter := NewRateLimiter(5, time.Hour)          // 5 admin requests per hour
+	faucetLimiter := NewRateLimiter(3, time.Hour)         // 3 faucet requests per hour
+
 	// Health check endpoint for Render
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -396,7 +460,7 @@ func main() {
 	})
 
 	// Create wallet endpoint
-	router.POST("/wallet", func(c *gin.Context) {
+	router.POST("/wallet", rateLimitMiddleware(generalLimiter), func(c *gin.Context) {
 		newWallet, err := wallet.NewWallet()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -419,7 +483,7 @@ func main() {
 	})
 
 	// Import wallet endpoint
-	router.POST("/wallet/import", func(c *gin.Context) {
+	router.POST("/wallet/import", rateLimitMiddleware(generalLimiter), func(c *gin.Context) {
 		var request struct {
 			PrivateKey string `json:"privateKey"`
 		}
@@ -468,7 +532,7 @@ func main() {
 	})
 
 	// Simple faucet endpoint (no admin key required for basic testing)
-	router.POST("/faucet", func(c *gin.Context) {
+	router.POST("/faucet", rateLimitMiddleware(faucetLimiter), func(c *gin.Context) {
 		var request struct {
 			Address string  `json:"address"`
 			Amount  float64 `json:"amount"`
@@ -509,7 +573,7 @@ func main() {
 	})
 
 	// NEW ENDPOINT: Distribute initial tokens to three wallets
-	router.POST("/admin/distribute-initial-tokens", func(c *gin.Context) {
+	router.POST("/admin/distribute-initial-tokens", rateLimitMiddleware(adminLimiter), func(c *gin.Context) {
 		var request struct {
 			AdminKey         string  `json:"adminKey"`
 			FounderAddress   string  `json:"founderAddress"`
@@ -525,6 +589,45 @@ func main() {
 			return
 		}
 
+		// SECURITY: Validate admin key
+		expectedAdminKey := os.Getenv("ADMIN_KEY")
+		if expectedAdminKey == "" {
+			expectedAdminKey = "binomena-admin-2024-secure-key" // Default for development only
+		}
+		if request.AdminKey != expectedAdminKey {
+			logAuditEvent(auditService, audit.WarningLevel, "UnauthorizedAdminAccess",
+				"Invalid admin key provided for token distribution", map[string]interface{}{
+					"ip":         c.ClientIP(),
+					"user_agent": c.GetHeader("User-Agent"),
+				})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid admin key"})
+			return
+		}
+
+		// Validate addresses format
+		if len(request.FounderAddress) != 66 || request.FounderAddress[:4] != "AdNe" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid founder address format"})
+			return
+		}
+		if len(request.TreasuryAddress) != 66 || request.TreasuryAddress[:4] != "AdNe" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid treasury address format"})
+			return
+		}
+		if len(request.CommunityAddress) != 66 || request.CommunityAddress[:4] != "AdNe" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid community address format"})
+			return
+		}
+
+		// Validate percentages
+		if request.FounderPercent < 0 || request.TreasuryPercent < 0 || request.CommunityPercent < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Percentages cannot be negative"})
+			return
+		}
+		if request.FounderPercent > 100 || request.TreasuryPercent > 100 || request.CommunityPercent > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Individual percentages cannot exceed 100"})
+			return
+		}
+
 		// Verify percentages add up to 100
 		totalPercent := request.FounderPercent + request.TreasuryPercent + request.CommunityPercent
 		if totalPercent != 100.0 {
@@ -534,6 +637,10 @@ func main() {
 
 		// Get total supply from treasury
 		totalSupply := binomToken.GetBalance("treasury")
+		if totalSupply <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "No tokens available in treasury"})
+			return
+		}
 
 		// Calculate token amounts
 		founderAmount := totalSupply * (request.FounderPercent / 100.0)
@@ -589,7 +696,7 @@ func main() {
 	})
 
 	// Transaction endpoint
-	router.POST("/transaction", func(c *gin.Context) {
+	router.POST("/transaction", rateLimitMiddleware(transactionLimiter), func(c *gin.Context) {
 		var request struct {
 			From       string  `json:"from"`
 			To         string  `json:"to"`
@@ -599,6 +706,32 @@ func main() {
 
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Validate addresses format
+		if len(request.From) != 66 || request.From[:4] != "AdNe" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid from address format"})
+			return
+		}
+		if len(request.To) != 66 || request.To[:4] != "AdNe" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid to address format"})
+			return
+		}
+
+		// Validate amount
+		if request.Amount <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Amount must be positive"})
+			return
+		}
+		if request.Amount > 1000000000 { // 1 billion max per transaction
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Amount exceeds maximum transaction limit"})
+			return
+		}
+
+		// Prevent self-transfer
+		if request.From == request.To {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot transfer to the same address"})
 			return
 		}
 
