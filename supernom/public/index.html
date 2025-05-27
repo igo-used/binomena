@@ -264,19 +264,19 @@
     <script>
         // Working button functions
         function openDemo() {
-            alert('🚀 Opening SuperNom Demo!\n\nYou will be redirected to the live VPN interface where you can:\n• Connect your wallet\n• Purchase VPN access with BNM tokens\n• Download WireGuard configuration\n• Start browsing privately!');
-            window.open('https://supernom-vpn.onrender.com/client/example.html', '_blank');
+            alert('🚀 Opening SuperNom Demo!\n\nNote: The demo interface is being deployed. For now, you can:\n• Test the API endpoints directly\n• Purchase VPN access with your wallet\n• Check system status and statistics\n\nOpening the API status page...');
+            window.open('https://supernom-vpn.onrender.com/status', '_blank');
         }
         
         function buyTokens() {
-            alert('🪙 Buy BNM Tokens!\n\nYou will be redirected to the Binomena blockchain where you can:\n• Create a wallet\n• Get free test tokens from faucet\n• Purchase BNM tokens for SuperNom VPN\n• Check your balance');
+            alert('🪙 Buy BNM Tokens!\n\nYou will be redirected to the Binomena blockchain where you can:\n• Create a wallet\n• Get free test tokens from faucet\n• Purchase BNM tokens for SuperNom VPN\n• Check your balance: 400 MILLION BNM available!');
             window.open('https://binomena-node.onrender.com', '_blank');
         }
         
         function getVPNAccess() {
             const walletPrompt = prompt('💰 Enter your BNM wallet address to check VPN access:\n\n(Format: AdNe...)', 'AdNe6c3ce54e4371d056c7c566675ba16909eb2e9534');
             if (walletPrompt) {
-                alert('🔍 Checking VPN access for your wallet...\n\nRedirecting to SuperNom VPN dashboard!');
+                alert('🔍 Checking VPN access for your wallet...\n\nRedirecting to SuperNom VPN API!');
                 window.open(`https://supernom-vpn.onrender.com/auth/check?wallet=${walletPrompt}`, '_blank');
             }
         }
@@ -292,8 +292,8 @@
         }
         
         function startNow() {
-            alert('🚀 Ready to Start Using SuperNom?\n\nStep 1: Get BNM tokens from Binomena blockchain\nStep 2: Use SuperNom VPN interface to purchase access\nStep 3: Download WireGuard config and connect!\n\nOpening the demo interface...');
-            window.open('https://supernom-vpn.onrender.com/client/example.html', '_blank');
+            alert('🚀 Ready to Start Using SuperNom?\n\nStep 1: Get BNM tokens from Binomena blockchain\nStep 2: Check VPN access with your wallet address\nStep 3: Purchase access and start browsing!\n\nRedirecting to blockchain...');
+            window.open('https://binomena-node.onrender.com', '_blank');
         }
         
         // Try to get live user count
