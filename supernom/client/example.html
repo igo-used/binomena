@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperNom - Decentralized VPN Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input::placeholder, textarea::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        .error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+        }
+        .info {
+            background: rgba(33, 150, 243, 0.3);
+            border: 1px solid #2196F3;
+        }
+        .config-box {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 SuperNom</h1>
+        <p class="subtitle">Decentralized VPN powered by Binomena Blockchain</p>
+        
+        <!-- System Status -->
+        <div class="section">
+            <h3>📊 System Status</h3>
+            <button onclick="checkSystemStatus()">Check Status</button>
+            <div id="systemStatus"></div>
+        </div>
+
+        <!-- Wallet Connection -->
+        <div class="section">
+            <h3>💼 Wallet Connection</h3>
+            <div class="form-group">
+                <label>Wallet Address (AdNe...):</label>
+                <input type="text" id="walletAddress" placeholder="AdNe1234567890..." value="AdNe1234567890123456789012345678901234567890123456789012345678901234">
+            </div>
+            <button onclick="checkAuthorization()">Check Authorization</button>
+            <button onclick="getUserReputation()">Get Reputation</button>
+            <div id="authStatus"></div>
+        </div>
+
+        <!-- VPN Access Purchase -->
+        <div class="section">
+            <h3>🔐 Purchase VPN Access</h3>
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label>Amount (BNM):</label>
+                        <input type="number" id="amount" value="10" min="10">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (hours):</label>
+                        <select id="duration">
+                            <option value="3600">1 Hour (Basic)</option>
+                            <option value="21600">6 Hours (Standard)</option>
+                            <option value="86400">24 Hours (Premium)</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>Geographic Zone:</label>
+                        <select id="geoZone">
+                            <option value="us-east">US East</option>
+                            <option value="us-west">US West</option>
+                            <option value="eu-central">EU Central</option>
+                            <option value="asia-pacific">Asia Pacific</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Signature:</label>
+                        <input type="text" id="paymentSig" placeholder="Blockchain transaction signature">
+                    </div>
+                </div>
+            </div>
+            <button onclick="purchaseAccess()">💰 Purchase Access</button>
+            <div id="purchaseStatus"></div>
+        </div>
+
+        <!-- VPN Configuration -->
+        <div class="section">
+            <h3>⚙️ VPN Configuration</h3>
+            <button onclick="getVPNConfig()">Get WireGuard Config</button>
+            <button onclick="generateQRCode()">Generate QR Code</button>
+            <div id="vpnConfig"></div>
+        </div>
+
+        <!-- Session Management -->
+        <div class="section">
+            <h3>📱 Session Management</h3>
+            <button onclick="getSessionStatus()">Session Status</button>
+            <button onclick="getUserSessions()">Session History</button>
+            <button onclick="revokeSession()">Revoke Current Session</button>
+            <div id="sessionInfo"></div>
+        </div>
+
+        <!-- Token Staking -->
+        <div class="section">
+            <h3>🔒 Token Staking</h3>
+            <div class="form-group">
+                <label>Stake Amount (BNM):</label>
+                <input type="number" id="stakeAmount" value="100" min="100">
+            </div>
+            <button onclick="stakeTokens()">Stake Tokens</button>
+            <div id="stakeStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        
+        // System Status Check
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('systemStatus', 'success', 
+                        `✅ System Status: ${data.data.status}\n` +
+                        `Active Sessions: ${data.data.vpn.activeSessions}\n` +
+                        `Total Revenue: ${data.data.vpn.totalRevenue} BNM\n` +
+                        `Emergency Mode: ${data.data.emergency ? 'Active' : 'Normal'}`
+                    );
+                } else {
+                    showStatus('systemStatus', 'error', `❌ Error: ${data.error}`);
+                }
+            } catch (error) {
+                showStatus('systemStatus', 'error', `❌ Network Error: ${error.message}`);
+            }
+        }
+
+        // Check Authorization
+        async function checkAuthorization() {
+            const wallet = document.getElementById('walletAddress').value;
+            if (!wallet) {
+                showStatus('authStatus', 'error', '❌ Please enter wallet address');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/check?wallet=${wallet}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.data.authorized) {
+                        showStatus('authStatus', 'success', 
+                            `✅ Authorized! Session: ${data.data.sessionId}\n` +
+                            `Expires: ${new Date(data.data.expiresAt * 1000).toLocaleString()}\n` +
+                            `Access Level: ${data.data.accessLevel}\n` +
+                            `Bandwidth: ${formatBytes(data.data.bandwidthUsed)}/${formatBytes(data.data.bandwidthLimit)}`
+                        );
+                    } else {
+                        showStatus('authStatus', 'info', '❌ No active session found');
+                    }
+                } else {
+                    showStatus('authStatus', 'error', `❌ Error: ${data.error}`);
+                }
+            } catch (error) {
+                showStatus('authStatus', 'error', `❌ Network Error: ${error.message}`);
+            }
+        }
+
+        // Get User Reputation
+        async function getUserReputation() {
+            const wallet = document.getElementById('walletAddress').value;
+            if (!wallet) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/user/reputation?address=${wallet}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('authStatus', 'info', 
+                        `📊 Reputation Score: ${data.data.trustScore}/1000\n` +
+                        `Access Tier: ${data.data.accessTier} (${data.data.reputationLevel})\n` +
+                        `Total Sessions: ${data.data.totalSessions}\n` +
+                        `Clean Sessions: ${data.data.cleanSessions}\n` +
+                        `Staked Tokens: ${data.data.stakeLocked} BNM`
+                    );
+                } else {
+                    showStatus('authStatus', 'info', '📊 New user - no reputation data');
+                }
+            } catch (error) {
+                console.error('Reputation check failed:', error);
+            }
+        }
+
+        // Purchase VPN Access
+        async function purchaseAccess() {
+            const wallet = document.getElementById('walletAddress').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const duration = parseInt(document.getElementById('duration').value);
+            const geoZone = document.getElementById('geoZone').value;
+            const paymentSig = document.getElementById('paymentSig').value;
+
+            if (!wallet || !amount || !paymentSig) {
+                showStatus('purchaseStatus', 'error', '❌ Please fill all required fields');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: wallet,
+                        tokenType: 'BNM',
+                        amount: amount,
+                        duration: duration,
+                        geographicZone: geoZone,
+                        paymentSignature: paymentSig
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('purchaseStatus', 'success', 
+                        `✅ VPN Access Purchased!\n` +
+                        `Session ID: ${data.data.sessionId}\n` +
+                        `Expires: ${new Date(data.data.expiresAt * 1000).toLocaleString()}\n` +
+                        `Access Level: ${data.data.accessLevel}\n` +
+                        `VPN Node: ${data.data.vpnNodeId}`
+                    );
+                } else {
+                    showStatus('purchaseStatus', 'error', `❌ Error: ${data.error}`);
+                }
+            } catch (error) {
+                showStatus('purchaseStatus', 'error', `❌ Network Error: ${error.message}`);
+            }
+        }
+
+        // Get VPN Configuration
+        async function getVPNConfig() {
+            const wallet = document.getElementById('walletAddress').value;
+            if (!wallet) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/config?wallet=${wallet}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const configBox = document.createElement('div');
+                    configBox.className = 'config-box';
+                    configBox.textContent = data.data.config;
+                    
+                    const configDiv = document.getElementById('vpnConfig');
+                    configDiv.innerHTML = '<h4>📋 WireGuard Configuration:</h4>';
+                    configDiv.appendChild(configBox);
+                    
+                    // Add download button
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.textContent = '💾 Download Config';
+                    downloadBtn.onclick = () => downloadConfig(data.data.config);
+                    configDiv.appendChild(downloadBtn);
+                } else {
+                    showStatus('vpnConfig', 'error', `❌ Error: ${data.error}`);
+                }
+            } catch (error) {
+                showStatus('vpnConfig', 'error', `❌ Network Error: ${error.message}`);
+            }
+        }
+
+        // Download Configuration File
+        function downloadConfig(config) {
+            const blob = new Blob([config], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'supernom-vpn.conf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Generate QR Code (placeholder)
+        function generateQRCode() {
+            showStatus('vpnConfig', 'info', '📱 QR Code generation coming soon! For now, download the config file and import it manually into WireGuard app.');
+        }
+
+        // Get Session Status
+        async function getSessionStatus() {
+            const wallet = document.getElementById('walletAddress').value;
+            if (!wallet) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/status?wallet=${wallet}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const session = data.data;
+                    showStatus('sessionInfo', 'success', 
+                        `📱 Active Session:\n` +
+                        `Session ID: ${session.sessionId}\n` +
+                        `Created: ${new Date(session.createdAt * 1000).toLocaleString()}\n` +
+                        `Expires: ${new Date(session.expiresAt * 1000).toLocaleString()}\n` +
+                        `Bandwidth: ${formatBytes(session.bandwidthUsed)}/${formatBytes(session.bandwidthLimit)}\n` +
+                        `VPN Node: ${session.vpnNodeId}\n` +
+                        `Zone: ${session.geographicZone}`
+                    );
+                } else {
+                    showStatus('sessionInfo', 'info', '❌ No active session found');
+                }
+            } catch (error) {
+                showStatus('sessionInfo', 'error', `❌ Network Error: ${error.message}`);
+            }
+        }
+
+        // Stake Tokens
+        async function stakeTokens() {
+            const wallet = document.getElementById('walletAddress').value;
+            const amount = parseFloat(document.getElementById('stakeAmount').value);
+
+            if (!wallet || !amount) {
+                showStatus('stakeStatus', 'error', '❌ Please enter wallet and amount');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/user/stake`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: wallet,
+                        amount: amount
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('stakeStatus', 'success', 
+                        `✅ ${data.data.message}\n` +
+                        `Total Stake: ${data.data.totalStake} BNM\n` +
+                        `Trust Score: ${data.data.trustScore}\n` +
+                        `Access Tier: ${data.data.accessTier}`
+                    );
+                } else {
+                    showStatus('stakeStatus', 'error', `❌ Error: ${data.error}`);
+                }
+            } catch (error) {
+                showStatus('stakeStatus', 'error', `❌ Network Error: ${error.message}`);
+            }
+        }
+
+        // Helper Functions
+        function showStatus(elementId, type, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Auto-check status on load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSystemStatus();
+        });
+    </script>
+</body>
+</html> 
