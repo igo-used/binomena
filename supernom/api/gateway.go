@@ -75,6 +75,16 @@ func NewSuperNomGateway(port string) *SuperNomGateway {
 
 // setupRoutes configures all API endpoints
 func (g *SuperNomGateway) setupRoutes() {
+	// Serve marketing landing page at root
+	g.ServerMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			http.ServeFile(w, r, "public/index.html")
+			return
+		}
+		// For other paths, return 404
+		http.NotFound(w, r)
+	}).Methods("GET")
+
 	// VPN Access endpoints
 	g.ServerMux.HandleFunc("/auth/check", g.checkAuthHandler).Methods("GET")
 	g.ServerMux.HandleFunc("/auth/purchase", g.purchaseAccessHandler).Methods("POST")
