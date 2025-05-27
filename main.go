@@ -1506,4 +1506,70 @@ func main() {
 	p2pNode.Stop()
 	time.Sleep(time.Second)
 	fmt.Println("Node stopped")
+
+	// SuperNom VPN System endpoint
+	http.HandleFunc("/supernom", func(w http.ResponseWriter, r *http.Request) {
+		supernomInfo := map[string]interface{}{
+			"name":        "SuperNom - Decentralized VPN",
+			"description": "Revolutionary VPN system using Binomena blockchain for access control",
+			"version":     "1.0.0",
+			"status":      "active",
+			"features": []string{
+				"Blockchain-based authentication",
+				"Token-based access control",
+				"Reputation system with staking",
+				"Democratic governance via delegates",
+				"WireGuard VPN protocol",
+				"Geographic node selection",
+				"Tiered access levels",
+				"Emergency shutdown controls",
+			},
+			"tokenomics": map[string]interface{}{
+				"basicAccess":    "10 BNM per hour",
+				"standardAccess": "50 BNM per 6 hours",
+				"premiumAccess":  "150 BNM per 24 hours",
+				"minStake":       "100 BNM for new users",
+			},
+			"architecture": map[string]interface{}{
+				"smartContracts": "VPN Access + Governance contracts",
+				"vpnProtocol":    "WireGuard",
+				"blockchain":     "Binomena DPoS",
+				"consensus":      "Delegate voting",
+			},
+			"security": map[string]interface{}{
+				"antiAbuse":    "Reputation-based access control",
+				"rateLimiting": "Session limits per day",
+				"emergency":    "Delegate-controlled shutdown",
+				"privacy":      "No deep packet inspection",
+			},
+			"integration": map[string]interface{}{
+				"apiEndpoint":   "http://localhost:8080",
+				"webInterface":  "http://localhost:8080/client/example.html",
+				"documentation": "https://github.com/your-repo/binomena/tree/main/supernom",
+				"status":        "http://localhost:8080/status",
+			},
+			"roadmap": []string{
+				"Phase 1: MVP with basic VPN access (Current)",
+				"Phase 2: Enhanced infrastructure and mobile apps",
+				"Phase 3: 6G and satellite internet integration",
+				"Phase 4: Global mesh networking and enterprise features",
+			},
+			"governance": map[string]interface{}{
+				"delegates":       "Binomena delegates manage SuperNom",
+				"votingPower":     "Based on stake in Binomena",
+				"proposalTypes":   []string{"blacklist", "whitelist", "settings", "emergency"},
+				"votingThreshold": "51-75% depending on proposal type",
+			},
+			"stats": map[string]interface{}{
+				"launched":       time.Now().Unix(),
+				"totalNodes":     1, // Will be updated as network grows
+				"supportedZones": []string{"us-east", "us-west", "eu-central", "asia-pacific"},
+				"maxDelegates":   21,
+				"emergencyMode":  false,
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(supernomInfo)
+	})
 }

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperNom - World's First Blockchain VPN | Replace Your SIM Card</title>
+    <meta name="description" content="Revolutionary VPN powered by Binomena blockchain. No SIM cards, no KYC - just your wallet and BNM tokens for global internet access.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 20px;
+            position: relative;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
+            animation: float 20s infinite linear;
+        }
+        @keyframes float { 0% { transform: translateY(0px); } 100% { transform: translateY(-100px); } }
+        
+        .hero-content {
+            max-width: 800px;
+            z-index: 1;
+            position: relative;
+        }
+        h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+        }
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 4rem;
+        }
+        .feature {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .feature h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stats {
+            background: rgba(0,0,0,0.2);
+            padding: 60px 20px;
+            text-align: center;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #FFD700;
+        }
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+        
+        .live-demo {
+            padding: 80px 20px;
+            text-align: center;
+        }
+        .demo-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .subtitle { font-size: 1.2rem; }
+            .cta-buttons { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <section class="hero">
+        <div class="hero-content">
+            <h1>🚀 SuperNom</h1>
+            <p class="subtitle">World's First Blockchain VPN<br>Replace Your SIM Card with Your Wallet</p>
+            
+            <div class="cta-buttons">
+                <a href="/client/example.html" class="btn btn-primary">🔥 Try Live Demo</a>
+                <a href="https://binomena-node.onrender.com" class="btn btn-secondary">🪙 Buy BNM Tokens</a>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🔐</div>
+                    <h3>No KYC Required</h3>
+                    <p>Just your wallet address. No personal data, no tracking, no surveillance.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Instant Access</h3>
+                    <p>Pay with BNM tokens, get VPN access immediately. No subscriptions, no credit cards.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Global Network</h3>
+                    <p>Access servers worldwide. Your tokens work everywhere, no borders.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Blockchain Security</h3>
+                    <p>Powered by Binomena blockchain. Democratic governance, community-driven.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="stats">
+        <h2 style="font-size: 2.5rem; margin-bottom: 3rem;">Revolutionary Pricing</h2>
+        <div class="stats-grid">
+            <div class="stat">
+                <div class="stat-number">10</div>
+                <div class="stat-label">BNM per hour<br><small>Basic VPN (5GB)</small></div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">50</div>
+                <div class="stat-label">BNM per 6 hours<br><small>Standard VPN (15GB)</small></div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">150</div>
+                <div class="stat-label">BNM per 24 hours<br><small>Premium VPN (50GB)</small></div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">100</div>
+                <div class="stat-label">BNM stake required<br><small>New user trust</small></div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="live-demo">
+        <h2 style="font-size: 2.5rem; margin-bottom: 2rem;">🎯 The Future is NOW</h2>
+        <div class="demo-box">
+            <h3>Live Blockchain VPN Status</h3>
+            <p style="margin: 20px 0;">✅ Binomena Blockchain: <strong>LIVE</strong></p>
+            <p style="margin: 20px 0;">✅ SuperNom VPN: <strong>OPERATIONAL</strong></p>
+            <p style="margin: 20px 0;">✅ BNM Token Supply: <strong>1 Billion</strong></p>
+            <p style="margin: 20px 0;">🔥 <strong>First Mover Advantage: UNLIMITED</strong></p>
+            
+            <div style="margin: 30px 0;">
+                <a href="/status" class="btn btn-primary">📊 View Live Stats</a>
+            </div>
+            
+            <p style="font-size: 0.9rem; opacity: 0.7; margin-top: 20px;">
+                SuperNom represents the future where your wallet becomes your digital identity,<br>
+                and blockchain tokens become your gateway to the global internet.
+            </p>
+        </div>
+    </section>
+    
+    <footer style="background: rgba(0,0,0,0.3); padding: 40px 20px; text-align: center;">
+        <h3>🚀 Join the Revolution</h3>
+        <p style="margin: 20px 0;">The telecom industry is worth $1.7 trillion. SuperNom will capture it all.</p>
+        <p style="font-size: 0.9rem; opacity: 0.7;">
+            Built on Binomena Blockchain | Powered by BNM Tokens | The Future of Internet Access
+        </p>
+    </footer>
+</body>
+</html> 

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: supernom-vpn
+    env: go
+    region: frankfurt
+    plan: starter
+    buildCommand: cd supernom && go mod download && go build -o supernom-app
+    startCommand: cd supernom && ./supernom-app
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: SUPERNOM_PORT
+        value: 10000
+      - key: BINOMENA_NODE_URL
+        value: https://binomena-node.onrender.com
+      - key: GIN_MODE
+        value: release
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true 
